@@ -69,9 +69,64 @@ class NAILS_Admin extends NAILS_API_Controller
 		elseif ( ! $this->user_model->is_admin() ) :
 
 			$this->_authorised	= FALSE;
-			$this->_error		= lang( 'auth_require_administrator' );
+			$this->_error		= lang( 'auth_require_admin' );
 
 		endif;
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	public function nav()
+	{
+		if ( ! $this->_authorised ) :
+
+			$_out = array();
+			$_out['status'] = 401;
+			$_out['error']	= $this->_error;
+			$this->_out( $_out );
+			return;
+
+		endif;
+
+		// --------------------------------------------------------------------------
+
+		$_method = $this->uri->segment( 4 );
+
+		if ( method_exists( $this, '_nav_' . $_method ) ) :
+
+			$this->{'_nav_' . $_method}();
+
+		else :
+
+			$this->_method_not_found( 'nav/' . $_method );
+
+		endif;
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	public function _nav_save()
+	{
+		$_pref_raw	= $this->input->get( 'preferences' );
+		$_pref		= new stdClass();
+
+		foreach( $_pref_raw AS $module => $options ) :
+
+			$_pref->{$module} = new stdClass();
+			$_pref->{$module}->open = string_to_boolean( $options['open'] );
+
+		endforeach;
+
+		$_data = new stdClass();
+		$_data->admin_nav = @serialize( $_pref );
+
+		$this->user_model->update( active_user( 'id' ), $_data );
+
+		$this->_out();
 	}
 }
 

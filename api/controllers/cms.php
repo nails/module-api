@@ -68,7 +68,7 @@ class NAILS_Cms extends NAILS_API_Controller
 		if ( ! $this->user_model->is_admin() ) :
 
 			$this->_authorised	= FALSE;
-			$this->_error		= lang( 'auth_require_administrator' );
+			$this->_error		= lang( 'auth_require_admin' );
 
 		endif;
 	}
