@@ -181,6 +181,7 @@ class NAILS_Cms extends NAILS_API_Controller
 	{
 		$_page_data_raw		= $this->input->get_post( 'page_data' );
 		$_publish_action	= $this->input->get_post( 'publish_action' );
+		$_generate_preview	= $this->input->get_post( 'generate_preview' );
 
 		if ( ! $_page_data_raw ) :
 
@@ -240,8 +241,7 @@ class NAILS_Cms extends NAILS_API_Controller
 		$_check_obj					= new stdClass();
 		$_check_obj->data			= $_page_data->data;
 		$_check_obj->widget_areas	= $_page_data->widget_areas;
-
-		$_check_hash1		= md5( json_encode( $_check_obj, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE ) );
+		$_check_hash1				= md5( json_encode( $_check_obj, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE ) );
 
 		if ( $_hash !== $_check_hash1 ) :
 
@@ -293,7 +293,7 @@ class NAILS_Cms extends NAILS_API_Controller
 		// --------------------------------------------------------------------------
 
 		/**
-		 * Data is set, determine whether we're saving or creating
+		 * Data is set, determine whether we're previewing, saving or creating
 		 *
 		 * If an ID is missing then we're creating a new page otherwise we're updating.
 		 *
@@ -301,87 +301,118 @@ class NAILS_Cms extends NAILS_API_Controller
 
 		$this->load->model( 'cms/cms_page_model' );
 
-		if ( ! $_data->id ) :
+		if ( ! empty( $_generate_preview ) ) :
 
-			if ( ! user_has_permission( 'admin.cms.can_create_page' ) ) :
+			if ( ! user_has_permission( 'admin.cms.can_preview_page' ) ) :
 
 				$this->_out(array(
 					'status'	=> 400,
-					'error'		=> 'You do not have permission to create CMS Pages.'
+					'error'		=> 'You do not have permission to preview CMS Pages.'
 				));
 				return;
 
 			endif;
 
-			$_id = $this->cms_page_model->create( $_data );
+			$_id = $this->cms_page_model->create_preview( $_data );
 
 			if ( ! $_id ) :
 
 				$this->_out(array(
 					'status'	=> 500,
-					'error'		=> 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
+					'error'		=> 'There was a problem creating the page preview. ' . $this->cms_page_model->last_error()
 				));
 				return;
 
 			endif;
+
+			$_out		= array();
+			$_out['id']	= $_id;
 
 		else :
 
-			if ( ! user_has_permission( 'admin.cms.can_edit_page' ) ) :
+			if ( ! $_data->id ) :
 
-				$this->_out(array(
-					'status'	=> 400,
-					'error'		=> 'You do not have permission to edit CMS Pages.'
-				));
-				return;
+				if ( ! user_has_permission( 'admin.cms.can_create_page' ) ) :
 
-			endif;
+					$this->_out(array(
+						'status'	=> 400,
+						'error'		=> 'You do not have permission to create CMS Pages.'
+					));
+					return;
 
-			if ( $this->cms_page_model->update( $_data->id, $_data, $this->data ) ) :
+				endif;
 
-				$_id = $_data->id;
+				$_id = $this->cms_page_model->create( $_data );
+
+				if ( ! $_id ) :
+
+					$this->_out(array(
+						'status'	=> 500,
+						'error'		=> 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
+					));
+					return;
+
+				endif;
 
 			else :
 
-				$this->_out(array(
-					'status'	=> 500,
-					'error'		=> 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
-				));
-				return;
+				if ( ! user_has_permission( 'admin.cms.can_edit_page' ) ) :
+
+					$this->_out(array(
+						'status'	=> 400,
+						'error'		=> 'You do not have permission to edit CMS Pages.'
+					));
+					return;
+
+				endif;
+
+				if ( $this->cms_page_model->update( $_data->id, $_data, $this->data ) ) :
+
+					$_id = $_data->id;
+
+				else :
+
+					$this->_out(array(
+						'status'	=> 500,
+						'error'		=> 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
+					));
+					return;
+
+				endif;
 
 			endif;
 
+			// --------------------------------------------------------------------------
+
+			/**
+			 * Page has been saved! Any further steps?
+			 *
+			 * If is_published is defined then we need to consider it's published status.
+			 * If is_published is NULL then we're leaving it as it is.
+			 *
+			 **/
+
+			$_out		= array();
+			$_out['id']	= $_id;
+
+			switch( $_publish_action ) :
+
+				case 'PUBLISH' :
+
+					$this->cms_page_model->publish( $_id );
+
+				break;
+
+				case 'NONE' :
+				default :
+
+					//	Do nothing, absolutely nothing. Go have a margarita.
+
+				break;
+
+			endswitch;
+
 		endif;
-
-		// --------------------------------------------------------------------------
-
-		/**
-		 * Page has been saved! Any further steps?
-		 *
-		 * If is_published is defined then we need to consider it's published status.
-		 * If is_published is NULL then we're leaving it as it is.
-		 *
-		 **/
-
-		$_out		= array();
-		$_out['id']	= $_id;
-
-		switch( $_publish_action ) :
-
-			case 'PUBLISH' :
-
-				$this->cms_page_model->publish( $_id );
-
-			break;
-
-			case 'NONE' :
-			default :
-
-				//	Do nothing, absolutely nothing. Go have a margarita.
-
-			break;
-
-		endswitch;
 
 		// --------------------------------------------------------------------------
 

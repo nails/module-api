@@ -50,7 +50,7 @@ class NAILS_Cdnapi extends NAILS_API_Controller
 		// --------------------------------------------------------------------------
 
 
-		$this->load->library( 'cdn' );
+		$this->load->library( 'cdn/cdn' );
 	}
 
 
