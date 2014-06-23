@@ -19,8 +19,8 @@ require_once '_api.php';
 
 class NAILS_Shop extends NAILS_API_Controller
 {
-	private $_authorised;
-	private $_error;
+	protected $_authorised;
+	protected $_error;
 
 
 	// --------------------------------------------------------------------------
@@ -54,30 +54,35 @@ class NAILS_Shop extends NAILS_API_Controller
 
 	public function basket()
 	{
-		//	Action?
-		$_method = $this->uri->rsegment( 3 );
-		switch ( $_method ) :
+		$_method = $this->uri->segment( 4 );
 
-			case 'add' :		$this->_basket_add( );						break;
-			case 'remove' :		$this->_basket_remove();					break;
-			case 'increment' :	$this->_basket_increment();					break;
-			case 'decrement' :	$this->_basket_decrement();					break;
-			default :			$this->_basket_unknown_action( $_method );	break;
+		if ( method_exists( $this, '_basket_' . $_method ) ) :
 
-		endswitch;
+			$this->{'_basket_' . $_method}();
+
+		else :
+
+			$this->_method_not_found( 'basket/' . $_method );
+
+		endif;
 	}
 
 
 	// --------------------------------------------------------------------------
 
 
-	private function _basket_add()
+	protected function _basket_add()
 	{
 		$_out = array();
 
 		// --------------------------------------------------------------------------
 
-		//	Do something
+		if ( ! $this->shop_basket_model->add( $this->uri->rsegment( 4 ), $this->uri->rsegment( 5 ) ) ) :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_basket_model->last_error();
+
+		endif;
 
 		// --------------------------------------------------------------------------
 
@@ -88,13 +93,18 @@ class NAILS_Shop extends NAILS_API_Controller
 	// --------------------------------------------------------------------------
 
 
-	private function _basket_remove()
+	protected function _basket_remove()
 	{
 		$_out = array();
 
 		// --------------------------------------------------------------------------
 
-		//	Do something
+		if ( ! $this->shop_basket_model->remove( $this->uri->rsegment( 4 ), $this->uri->rsegment( 5 ) ) ) :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_basket_model->last_error();
+
+		endif;
 
 		// --------------------------------------------------------------------------
 
@@ -105,13 +115,18 @@ class NAILS_Shop extends NAILS_API_Controller
 	// --------------------------------------------------------------------------
 
 
-	private function _basket_increment()
+	protected function _basket_increment()
 	{
 		$_out = array();
 
 		// --------------------------------------------------------------------------
 
-		//	Do something
+		if ( ! $this->shop_basket_model->increment( $this->uri->rsegment( 4 ) ) ) :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_basket_model->last_error();
+
+		endif;
 
 		// --------------------------------------------------------------------------
 
@@ -122,13 +137,18 @@ class NAILS_Shop extends NAILS_API_Controller
 	// --------------------------------------------------------------------------
 
 
-	private function _basket_decrement()
+	protected function _basket_decrement()
 	{
 		$_out = array();
 
 		// --------------------------------------------------------------------------
 
-		//	Do something
+		if ( ! $this->shop_basket_model->decrement( $this->uri->rsegment( 4 ) ) ) :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_basket_model->last_error();
+
+		endif;
 
 		// --------------------------------------------------------------------------
 
@@ -139,9 +159,114 @@ class NAILS_Shop extends NAILS_API_Controller
 	// --------------------------------------------------------------------------
 
 
-	private function _basket_unknown_action( $method )
+	protected function _basket_add_voucher()
 	{
-		$this->_method_not_found( 'basket/' . $method );
+		$_out		= array();
+		$_voucher	= $this->shop_voucher_model->validate( $this->input->post( 'voucher' ), get_basket() );
+
+		if ( $_voucher ) :
+
+			if ( ! $this->shop_basket_model->add_voucher( $_voucher->code ) ) :
+
+				$_out['status']	= 400;
+				$_out['error']	= $this->shop_basket_model->last_error();
+
+			endif;
+
+		else :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_voucher_model->last_error();
+
+		endif;
+
+		// --------------------------------------------------------------------------
+
+		$this->_out( $_out );
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	protected function _basket_remove_voucher()
+	{
+		$_out = array();
+
+		// --------------------------------------------------------------------------
+
+		if ( ! $this->shop_basket_model->remove_voucher() ) :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_basket_model->last_error();
+
+		endif;
+
+		// --------------------------------------------------------------------------
+
+		$this->_out( $_out );
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	protected function _basket_set_shipping_method()
+	{
+		$_out		= array();
+		$_method	= $this->shop_shipping_model->validate( $this->input->post( 'shipping_method' ) );
+
+		if ( $_method ) :
+
+			if ( ! $this->shop_basket_model->add_shipping_method( $_method->id ) ) :
+
+				$_out['status']	= 400;
+				$_out['error']	= $this->shop_basket_model->last_error();
+
+			endif;
+
+		else :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_shipping_model->last_error();
+
+		endif;
+
+		// --------------------------------------------------------------------------
+
+		$this->_out( $_out );
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	protected function _basket_set_currency()
+	{
+		$_out		= array();
+		$_currency	= $this->shop_currency_model->get_by_code( $this->input->post( 'currency' ) );
+
+		if ( $_currency ) :
+
+			$this->session->set_userdata( 'shop_currency', $_currency->code );
+
+			if ( $this->user_model->is_logged_in() ) :
+
+				//	Save to the user object
+				$this->user_model->update( active_user( 'id' ), array( 'shop_currency' => $_currency->code ) );
+
+			endif;
+
+		else :
+
+			$_out['status']	= 400;
+			$_out['error']	= $this->shop_shipping_model->last_error();
+
+		endif;
+
+		// --------------------------------------------------------------------------
+
+		$this->_out( $_out );
 	}
 }
 
