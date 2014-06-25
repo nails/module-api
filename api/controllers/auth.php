@@ -94,7 +94,7 @@ class NAILS_Auth extends NAILS_API_Controller
 				if ( $_login['last_login'] ) :
 
 					$this->load->helper( 'date' );
-					$this->config->load( 'auth' );
+					$this->config->load( 'auth/auth' );
 
 					$_last_login = $this->config->item( 'auth_show_nicetime_on_login' ) ? nice_time( strtotime( $_login['last_login'] ) ) : user_datetime( $_login['last_login'] );
 
