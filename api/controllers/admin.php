@@ -47,7 +47,7 @@ class NAILS_Admin extends NAILS_API_Controller
 		//	Constructor mabobs.
 
 		//	IP whitelist?
-		$_ip_whitelist = json_decode( APP_ADMIN_IP_WHITELIST );
+		$_ip_whitelist = (array) app_setting( 'admin_whitelist', 'app' );
 
 		if ( $_ip_whitelist ) :
 
