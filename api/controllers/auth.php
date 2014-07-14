@@ -54,9 +54,9 @@ class NAILS_Auth extends NAILS_API_Controller
 		$_remember	= $this->input->post( 'remember' );
 		$_out		= array();
 
-		$_login		= $this->auth_model->login( $_email, $_password, $_remember );
+		$_user		= $this->auth_model->login( $_email, $_password, $_remember );
 
-		if ( $_login ) :
+		if ( $_user ) :
 
 			/**
 			 * User was recognised and permitted to log in. Final check to
@@ -67,13 +67,11 @@ class NAILS_Auth extends NAILS_API_Controller
 			 *
 			 **/
 
-			if ( isset( $_login['temp_pw'] ) ) :
+			if ( ! empty( $_user->temp_pw ) ) :
 
 				/**
 				 * Temporary password detected, log user out and redirect to
 				 * temp password reset page.
-				 *
-				 * temp_pw will be an array containing the user's ID and hash
 				 *
 				 **/
 
@@ -84,49 +82,47 @@ class NAILS_Auth extends NAILS_API_Controller
 				$_out['status']	= 401;
 				$_out['error']	= 'Temporary Password';
 				$_out['code']	= 2;
-				$_out['goto']	= site_url( 'auth/reset_password/' . $_login['temp_pw']['id'] . '/' . $_login['temp_pw']['hash'] . $_return_to );
+				$_out['goto']	= site_url( 'auth/reset_password/' . $_user->id . '/' . md5( $_user->salt ) . $_return_to );
 
 			else :
 
 				//	Finally! Send this user on their merry way...
-				$_first_name = $_login['first_name'];
-
-				if ( $_login['last_login'] ) :
+				if ( $_user->last_login ) :
 
 					$this->load->helper( 'date' );
 					$this->config->load( 'auth/auth' );
 
-					$_last_login = $this->config->item( 'auth_show_nicetime_on_login' ) ? nice_time( strtotime( $_login['last_login'] ) ) : user_datetime( $_login['last_login'] );
+					$_last_login = $this->config->item( 'auth_show_nicetime_on_login' ) ? nice_time( strtotime( $_user->last_login ) ) : user_datetime( $_user->last_login );
 
 					if ( $this->config->item( 'auth_show_last_ip_on_login' ) ) :
 
-						$_last_ip = $_login['last_ip'];
+						$_last_ip = $_user->last_ip;
 
-						$this->session->set_flashdata( 'message', lang( 'auth_login_ok_welcome_with_ip', array( $_first_name, $_last_login, $_last_ip ) ) );
+						$this->session->set_flashdata( 'message', lang( 'auth_login_ok_welcome_with_ip', array( $_user->first_name, $_last_login, $_user->last_ip ) ) );
 
 					else :
 
-						$this->session->set_flashdata( 'message', lang( 'auth_login_ok_welcome', array( $_first_name, $_last_login ) ) );
+						$this->session->set_flashdata( 'message', lang( 'auth_login_ok_welcome', array( $_user->first_name, $_last_login ) ) );
 
 					endif;
 
 				else :
 
-					$this->session->set_flashdata( 'message', lang( 'auth_login_ok_welcome_notime', array( $_first_name ) ) );
+					$this->session->set_flashdata( 'message', lang( 'auth_login_ok_welcome_notime', array( $_user->first_name ) ) );
 
 				endif;
 
-				$_redirect = ( $this->data['return_to'] ) ? $this->data['return_to'] : $_login['homepage'];
+				$_redirect = $this->data['return_to'] ? $this->data['return_to'] : $_user->group_homepage;
 
 				// --------------------------------------------------------------------------
 
 				//	Generate an event for this log in
-				create_event( 'did_log_in', $_login['user_id'], 0, NULL, array( 'method' => 'api' ) );
+				create_event( 'did_log_in', $_user->id, 0, NULL, array( 'method' => 'api' ) );
 
 				// --------------------------------------------------------------------------
 
 				//	Login failed
-				$_out['goto']	= site_url( $_redirect );
+				$_out['goto'] = site_url( $_redirect );
 
 			endif;
 
