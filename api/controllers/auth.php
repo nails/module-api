@@ -52,9 +52,8 @@ class NAILS_Auth extends NAILS_API_Controller
 		$_email		= $this->input->post( 'email' );
 		$_password	= $this->input->post( 'password' );
 		$_remember	= $this->input->post( 'remember' );
-		$_out		= array();
-
 		$_user		= $this->auth_model->login( $_email, $_password, $_remember );
+		$_out		= array();
 
 		if ( $_user ) :
 
