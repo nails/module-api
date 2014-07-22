@@ -77,7 +77,10 @@ class NAILS_Shop extends NAILS_API_Controller
 
 		// --------------------------------------------------------------------------
 
-		if ( ! $this->shop_basket_model->add( $this->uri->rsegment( 4 ), $this->uri->rsegment( 5 ) ) ) :
+		$_variant_id	= $this->input->get_post( 'variant_id' );
+		$_quantity		= $this->input->get_post( 'quantity' ) ? $this->input->get_post( 'quantity' ) : 1;
+
+		if ( ! $this->shop_basket_model->add( $_variant_id, $$_quantity ) ) :
 
 			$_out['status']	= 400;
 			$_out['error']	= $this->shop_basket_model->last_error();
@@ -99,7 +102,9 @@ class NAILS_Shop extends NAILS_API_Controller
 
 		// --------------------------------------------------------------------------
 
-		if ( ! $this->shop_basket_model->remove( $this->uri->rsegment( 4 ), $this->uri->rsegment( 5 ) ) ) :
+		$_variant_id = $this->input->get_post( 'variant_id' );
+
+		if ( ! $this->shop_basket_model->remove( $_variant_id ) ) :
 
 			$_out['status']	= 400;
 			$_out['error']	= $this->shop_basket_model->last_error();
@@ -121,7 +126,9 @@ class NAILS_Shop extends NAILS_API_Controller
 
 		// --------------------------------------------------------------------------
 
-		if ( ! $this->shop_basket_model->increment( $this->uri->rsegment( 4 ) ) ) :
+		$_variant_id = $this->input->get_post( 'variant_id' );
+
+		if ( ! $this->shop_basket_model->increment( $_variant_id ) ) :
 
 			$_out['status']	= 400;
 			$_out['error']	= $this->shop_basket_model->last_error();
@@ -143,7 +150,9 @@ class NAILS_Shop extends NAILS_API_Controller
 
 		// --------------------------------------------------------------------------
 
-		if ( ! $this->shop_basket_model->decrement( $this->uri->rsegment( 4 ) ) ) :
+		$_variant_id = $this->input->get_post( 'variant_id' );
+
+		if ( ! $this->shop_basket_model->decrement( $_variant_id ) ) :
 
 			$_out['status']	= 400;
 			$_out['error']	= $this->shop_basket_model->last_error();
@@ -162,7 +171,7 @@ class NAILS_Shop extends NAILS_API_Controller
 	protected function _basket_add_voucher()
 	{
 		$_out		= array();
-		$_voucher	= $this->shop_voucher_model->validate( $this->input->post( 'voucher' ), get_basket() );
+		$_voucher	= $this->shop_voucher_model->validate( $this->input->get_post( 'voucher' ), get_basket() );
 
 		if ( $_voucher ) :
 
@@ -214,7 +223,7 @@ class NAILS_Shop extends NAILS_API_Controller
 	protected function _basket_set_shipping_method()
 	{
 		$_out		= array();
-		$_method	= $this->shop_shipping_model->validate( $this->input->post( 'shipping_method' ) );
+		$_method	= $this->shop_shipping_model->validate( $this->input->get_post( 'shipping_method' ) );
 
 		if ( $_method ) :
 
@@ -244,7 +253,7 @@ class NAILS_Shop extends NAILS_API_Controller
 	protected function _basket_set_currency()
 	{
 		$_out		= array();
-		$_currency	= $this->shop_currency_model->get_by_code( $this->input->post( 'currency' ) );
+		$_currency	= $this->shop_currency_model->get_by_code( $this->input->get_post( 'currency' ) );
 
 		if ( $_currency ) :
 
