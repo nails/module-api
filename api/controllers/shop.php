@@ -220,36 +220,6 @@ class NAILS_Shop extends NAILS_API_Controller
 	// --------------------------------------------------------------------------
 
 
-	protected function _basket_set_shipping_method()
-	{
-		$_out		= array();
-		$_method	= $this->shop_shipping_model->validate( $this->input->get_post( 'shipping_method' ) );
-
-		if ( $_method ) :
-
-			if ( ! $this->shop_basket_model->add_shipping_method( $_method->id ) ) :
-
-				$_out['status']	= 400;
-				$_out['error']	= $this->shop_basket_model->last_error();
-
-			endif;
-
-		else :
-
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_shipping_model->last_error();
-
-		endif;
-
-		// --------------------------------------------------------------------------
-
-		$this->_out( $_out );
-	}
-
-
-	// --------------------------------------------------------------------------
-
-
 	protected function _basket_set_currency()
 	{
 		$_out		= array();
@@ -269,7 +239,7 @@ class NAILS_Shop extends NAILS_API_Controller
 		else :
 
 			$_out['status']	= 400;
-			$_out['error']	= $this->shop_shipping_model->last_error();
+			$_out['error']	= $this->shop_currency_model->last_error();
 
 		endif;
 
