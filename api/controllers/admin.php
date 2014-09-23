@@ -111,13 +111,13 @@ class NAILS_Admin extends NAILS_API_Controller
 
 	public function _nav_save()
 	{
-		$_pref_raw	= $this->input->post( 'preferences' );
+		$_pref_raw	= $this->input->get_post( 'preferences' );
 		$_pref		= new stdClass();
 
 		foreach( $_pref_raw AS $module => $options ) :
 
-			$_pref->{$module} = new stdClass();
-			$_pref->{$module}->open = string_to_boolean( $options['open'] );
+			$_pref->{$module}		= new stdClass();
+			$_pref->{$module}->open	= string_to_boolean( $options['open'] );
 
 		endforeach;
 
