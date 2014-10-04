@@ -17,6 +17,9 @@ require_once '_api.php';
  *
  **/
 
+use Omnipay\Common;
+use Omnipay\Omnipay;
+
 class NAILS_Shop extends NAILS_API_Controller
 {
 	protected $_authorised;
@@ -240,6 +243,31 @@ class NAILS_Shop extends NAILS_API_Controller
 
 			$_out['status']	= 400;
 			$_out['error']	= $this->shop_currency_model->last_error();
+
+		endif;
+
+		// --------------------------------------------------------------------------
+
+		$this->_out( $_out );
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	public function webhook()
+	{
+		$_out = array();
+
+		// --------------------------------------------------------------------------
+
+		$this->load->model( 'shop/shop_payment_gateway_model' );
+		$_result = $this->shop_payment_gateway_model->complete_payment( $this->uri->segment( 4 ) );
+
+		if ( ! $_result ) :
+
+			$_out['status'] = 500;
+			$_out['error']	= $this->shop_payment_gateway_model->last_error();
 
 		endif;
 
