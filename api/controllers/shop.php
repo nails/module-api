@@ -257,12 +257,23 @@ class NAILS_Shop extends NAILS_API_Controller
 
 	public function webhook()
 	{
+		/**
+		 * We'll do logging for this method as it's reasonably important that
+		 * we keep a history of the things which happen
+		 */
+
+		// _LOG_MUTE_OUTPUT( TRUE );
+		_LOG( 'Webhook initialising' );
+		_LOG( 'State:' );
+		_LOG( 'RAW GET Data: ' . $this->input->server( 'QUERY_STRING' ) );
+		_LOG( 'RAW POST Data: ' . file_get_contents( 'php://input' ) );
+
 		$_out = array();
 
 		// --------------------------------------------------------------------------
 
 		$this->load->model( 'shop/shop_payment_gateway_model' );
-		$_result = $this->shop_payment_gateway_model->complete_payment( $this->uri->segment( 4 ) );
+		$_result = $this->shop_payment_gateway_model->complete_payment( $this->uri->segment( 4 ), TRUE );
 
 		if ( ! $_result ) :
 
@@ -272,6 +283,8 @@ class NAILS_Shop extends NAILS_API_Controller
 		endif;
 
 		// --------------------------------------------------------------------------
+
+		_LOG( 'Webhook terminating' );
 
 		$this->_out( $_out );
 	}
