@@ -49,6 +49,10 @@ class NAILS_Shop extends NAILS_API_Controller
 			$this->_method_not_found( $this->uri->segment( 2 ) );
 
 		endif;
+
+		// --------------------------------------------------------------------------
+
+		$this->load->model( 'shop/shop_model' );
 	}
 
 
@@ -273,7 +277,7 @@ class NAILS_Shop extends NAILS_API_Controller
 		// --------------------------------------------------------------------------
 
 		$this->load->model( 'shop/shop_payment_gateway_model' );
-		$_result = $this->shop_payment_gateway_model->complete_payment( $this->uri->segment( 4 ), TRUE );
+		$_result = $this->shop_payment_gateway_model->webhook_complete_payment( $this->uri->segment( 4 ), TRUE );
 
 		if ( ! $_result ) :
 
@@ -285,6 +289,53 @@ class NAILS_Shop extends NAILS_API_Controller
 		// --------------------------------------------------------------------------
 
 		_LOG( 'Webhook terminating' );
+
+		$this->_out( $_out );
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	public function order()
+	{
+		$_method = $this->uri->segment( 4 );
+
+		if ( method_exists( $this, '_order_' . $_method ) ) :
+
+			$this->load->model( 'shop/shop_order_model' );
+			$this->{'_order_' . $_method}();
+
+		else :
+
+			$this->_method_not_found( 'order/' . $_method );
+
+		endif;
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	protected function _order_status()
+	{
+		$_out	= array();
+		$_order	= $this->shop_order_model->get_by_ref( $this->input->get_post( 'ref' ) );
+
+		if ( $_order ) :
+
+			$_out['order']				= new stdClass();
+			$_out['order']->status		= $_order->status;
+			$_out['order']->is_recent	= ( time() - strtotime( $_order->created ) ) < 300;
+
+		else :
+
+			$_out['status']	= 400;
+			$_out['error']	= '"' . $this->input->get_post( 'ref' ) . '" is not a valid order ref';
+
+		endif;
+
+		// --------------------------------------------------------------------------
 
 		$this->_out( $_out );
 	}
