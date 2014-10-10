@@ -121,10 +121,20 @@ class NAILS_Admin extends NAILS_API_Controller
 
 		endforeach;
 
-		$_data = new stdClass();
-		$_data->admin_nav = @serialize( $_pref );
+		$this->load->model( 'admin/admin_model' );
+		$this->admin_model->set_admin_data( 'nav', $_pref );
 
-		$this->user_model->update( active_user( 'id' ), $_data );
+		$this->_out();
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	public function _nav_reset()
+	{
+		$this->load->model( 'admin/admin_model' );
+		$this->admin_model->unset_admin_data( 'nav' );
 
 		$this->_out();
 	}
