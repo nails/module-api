@@ -259,39 +259,59 @@ class NAILS_Shop extends NAILS_API_Controller
 	// --------------------------------------------------------------------------
 
 
-	public function webhook()
-	{
-		/**
-		 * We'll do logging for this method as it's reasonably important that
-		 * we keep a history of the things which happen
-		 */
+    public function webhook()
+    {
+        /**
+         * We'll do logging for this method as it's reasonably important that
+         * we keep a history of the things which happen
+         */
 
-		// _LOG_MUTE_OUTPUT( TRUE );
-		_LOG( 'Webhook initialising' );
-		_LOG( 'State:' );
-		_LOG( 'RAW GET Data: ' . $this->input->server( 'QUERY_STRING' ) );
-		_LOG( 'RAW POST Data: ' . file_get_contents( 'php://input' ) );
+        _LOG('Webhook initialising');
+        _LOG('State:');
+        _LOG('RAW GET Data: ' . $this->input->server('QUERY_STRING'));
+        _LOG('RAW POST Data: ' . file_get_contents('php://input'));
 
-		$_out = array();
+        $_out = array('status' => 200);
 
-		// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		$this->load->model( 'shop/shop_payment_gateway_model' );
-		$_result = $this->shop_payment_gateway_model->webhook_complete_payment( $this->uri->segment( 4 ), TRUE );
+        $this->load->model('shop/shop_payment_gateway_model');
+        $_result = $this->shop_payment_gateway_model->webhook_complete_payment($this->uri->segment(4), true);
 
-		if ( ! $_result ) :
+        if (!$_result) {
 
-			$_out['status'] = 500;
-			$_out['error']	= $this->shop_payment_gateway_model->last_error();
+            $_out['status'] = 500;
+            $_out['error']  = $this->shop_payment_gateway_model->last_error();
 
-		endif;
+        }
 
-		// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		_LOG( 'Webhook terminating' );
+        _LOG('Webhook terminating');
 
-		$this->_out( $_out );
-	}
+        /**
+         * Return in the format expected by the gateway, and don't set a header. Most
+         * gateways will keep trying, or send false positive failures if this comes
+         * back as non-200.
+         */
+
+        switch(strtolower($this->uri->segment(4))) {
+
+            case 'worldpay':
+
+                $format = 'TXT';
+                $_out   = json_encode($_out);
+                break;
+
+            default:
+
+                $format = 'JSON';
+                break;
+
+        }
+
+        $this->_out($_out, $format, false);
+    }
 
 
 	// --------------------------------------------------------------------------
