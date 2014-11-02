@@ -116,7 +116,7 @@ class NAILS_Auth extends NAILS_API_Controller
 				// --------------------------------------------------------------------------
 
 				//	Generate an event for this log in
-				create_event( 'did_log_in', $_user->id, 0, NULL, array( 'method' => 'api' ) );
+				create_event('did_log_in', array('method' => 'api'), $_user->id);
 
 				// --------------------------------------------------------------------------
 
@@ -149,7 +149,7 @@ class NAILS_Auth extends NAILS_API_Controller
 		if ( $this->user_model->is_logged_in() ) :
 
 			//	Generate an event for this log in
-			create_event( 'did_log_out', active_user( 'id' ) );
+			create_event('did_log_out');
 
 			// --------------------------------------------------------------------------
 
