@@ -70,7 +70,7 @@ class NAILS_API_Controller extends NAILS_Controller
                     break;
 
                 case 500:
-                    '500 Internal Server Error';
+                    $headerString = '500 Internal Server Error';
                     break;
 
                 default:
