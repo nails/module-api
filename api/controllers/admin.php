@@ -138,6 +138,64 @@ class NAILS_Admin extends NAILS_API_Controller
 
 		$this->_out();
 	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	public function users()
+	{
+		if ( ! $this->_authorised ) :
+
+			$_out = array();
+			$_out['status'] = 401;
+			$_out['error']	= $this->_error;
+			$this->_out( $_out );
+			return;
+
+		endif;
+
+		// --------------------------------------------------------------------------
+
+		$_method = $this->uri->segment( 4 );
+
+		if ( method_exists( $this, '_users_' . $_method ) ) :
+
+			$this->{'_users_' . $_method}();
+
+		else :
+
+			$this->_method_not_found( 'users/' . $_method );
+
+		endif;
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	private function _users_search()
+	{
+		$avatarSize = $this->input->get('avatarSize') ? $this->input->get('avatarSize') : 50;
+		$term       = $this->input->get('term');
+		$users      = $this->user_model->get_all(null, null, null, null, $term);
+		$out        = array('users' => array());
+
+		foreach ($users as $user) {
+
+			$temp              = new stdClass();
+			$temp->id          = $user->id;
+			$temp->email       = $user->email;
+			$temp->first_name  = $user->first_name;
+			$temp->last_name   = $user->last_name;
+			$temp->gender      = $user->gender;
+			$temp->profile_img = cdn_avatar($temp->id, $avatarSize, $avatarSize);
+
+			$out['users'][] = $temp;
+		}
+
+		$this->_out($out);
+	}
 }
 
 
