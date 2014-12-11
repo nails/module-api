@@ -1,9 +1,9 @@
-<?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php
 
 /**
- * Name:		Shop API
+ * Name:        Shop API
  *
- * Description:	This controller handles Shop API methods
+ * Description: This controller handles Shop API methods
  *
  **/
 
@@ -22,242 +22,282 @@ use Omnipay\Omnipay;
 
 class NAILS_Shop extends NAILS_API_Controller
 {
-	protected $_authorised;
-	protected $_error;
+    /**
+     * Constructor
+     *
+     * @access  public
+     * @return  void
+     *
+     **/
+    public function __construct()
+    {
+        parent::__construct();
 
+        // --------------------------------------------------------------------------
 
-	// --------------------------------------------------------------------------
+        //  Check this module is enabled in settings
+        if (!module_is_enabled('shop')) {
 
+            //  Cancel execution, module isn't enabled
+            $this->_method_not_found($this->uri->segment(2));
+        }
 
-	/**
-	 * Constructor
-	 *
-	 * @access	public
-	 * @return	void
-	 *
-	 **/
-	public function __construct()
-	{
-		parent::__construct();
+        // --------------------------------------------------------------------------
 
-		// --------------------------------------------------------------------------
+        $this->load->model('shop/shop_model');
+    }
 
-		//	Check this module is enabled in settings
-		if ( ! module_is_enabled( 'shop' ) ) :
 
-			//	Cancel execution, module isn't enabled
-			$this->_method_not_found( $this->uri->segment( 2 ) );
+    // --------------------------------------------------------------------------
 
-		endif;
 
-		// --------------------------------------------------------------------------
+    public function basket()
+    {
+        $method = $this->uri->segment(4);
 
-		$this->load->model( 'shop/shop_model' );
-	}
+        if (method_exists($this, '_basket_' . $method)) {
 
+            $this->{'_basket_' . $method}();
 
-	// --------------------------------------------------------------------------
+        } else {
 
+            $this->_method_not_found('basket/' . $method);
+        }
+    }
 
-	public function basket()
-	{
-		$_method = $this->uri->segment( 4 );
 
-		if ( method_exists( $this, '_basket_' . $_method ) ) :
+    // --------------------------------------------------------------------------
 
-			$this->{'_basket_' . $_method}();
 
-		else :
+    protected function _basket_add()
+    {
+        $out = array();
 
-			$this->_method_not_found( 'basket/' . $_method );
+        // --------------------------------------------------------------------------
 
-		endif;
-	}
+        $variantId = $this->input->get_post('variantId');
+        $quantity  = $this->input->get_post('quantity') ? $this->input->get_post('quantity') : 1;
 
+        if (!$this->shop_basket_model->add($variantId, $$quantity)) {
 
-	// --------------------------------------------------------------------------
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
 
+        // --------------------------------------------------------------------------
 
-	protected function _basket_add()
-	{
-		$_out = array();
+        $this->_out($out);
+    }
 
-		// --------------------------------------------------------------------------
 
-		$_variant_id	= $this->input->get_post( 'variant_id' );
-		$_quantity		= $this->input->get_post( 'quantity' ) ? $this->input->get_post( 'quantity' ) : 1;
+    // --------------------------------------------------------------------------
 
-		if ( ! $this->shop_basket_model->add( $_variant_id, $$_quantity ) ) :
 
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_basket_model->last_error();
+    protected function _basket_remove()
+    {
+        $out = array();
 
-		endif;
+        // --------------------------------------------------------------------------
 
-		// --------------------------------------------------------------------------
+        $variantId = $this->input->get_post('variantId');
 
-		$this->_out( $_out );
-	}
+        if (!$this->shop_basket_model->remove($variantId)) {
 
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
 
-	// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
+        $this->_out($out);
+    }
 
-	protected function _basket_remove()
-	{
-		$_out = array();
 
-		// --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
 
-		$_variant_id = $this->input->get_post( 'variant_id' );
 
-		if ( ! $this->shop_basket_model->remove( $_variant_id ) ) :
+    protected function _basket_increment()
+    {
+        $out = array();
 
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_basket_model->last_error();
+        // --------------------------------------------------------------------------
 
-		endif;
+        $variantId = $this->input->get_post('variantId');
 
-		// --------------------------------------------------------------------------
+        if (!$this->shop_basket_model->increment($variantId)) {
 
-		$this->_out( $_out );
-	}
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
 
+        // --------------------------------------------------------------------------
 
-	// --------------------------------------------------------------------------
+        $this->_out($out);
+    }
 
 
-	protected function _basket_increment()
-	{
-		$_out = array();
+    // --------------------------------------------------------------------------
 
-		// --------------------------------------------------------------------------
 
-		$_variant_id = $this->input->get_post( 'variant_id' );
+    protected function _basket_decrement()
+    {
+        $out = array();
 
-		if ( ! $this->shop_basket_model->increment( $_variant_id ) ) :
+        // --------------------------------------------------------------------------
 
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_basket_model->last_error();
+        $variantId = $this->input->get_post('variantId');
 
-		endif;
+        if (!$this->shop_basket_model->decrement($variantId)) {
 
-		// --------------------------------------------------------------------------
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
 
-		$this->_out( $_out );
-	}
+        // --------------------------------------------------------------------------
 
+        $this->_out($out);
+    }
 
-	// --------------------------------------------------------------------------
 
+    // --------------------------------------------------------------------------
 
-	protected function _basket_decrement()
-	{
-		$_out = array();
 
-		// --------------------------------------------------------------------------
+    protected function _basket_add_voucher()
+    {
+        $out     = array();
+        $voucher = $this->shop_voucher_model->validate($this->input->get_post('voucher'), get_basket());
 
-		$_variant_id = $this->input->get_post( 'variant_id' );
+        if ($voucher) {
 
-		if ( ! $this->shop_basket_model->decrement( $_variant_id ) ) :
+            if (!$this->shop_basket_model->addVoucher($voucher->code)) {
 
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_basket_model->last_error();
+                $out['status'] = 400;
+                $out['error']  = $this->shop_basket_model->last_error();
+            }
 
-		endif;
+        } else {
 
-		// --------------------------------------------------------------------------
+            $out['status'] = 400;
+            $out['error']  = $this->shop_voucher_model->last_error();
+        }
 
-		$this->_out( $_out );
-	}
+        // --------------------------------------------------------------------------
 
+        $this->_out($out);
+    }
 
-	// --------------------------------------------------------------------------
 
+    // --------------------------------------------------------------------------
 
-	protected function _basket_add_voucher()
-	{
-		$_out		= array();
-		$_voucher	= $this->shop_voucher_model->validate( $this->input->get_post( 'voucher' ), get_basket() );
 
-		if ( $_voucher ) :
+    protected function _basket_remove_voucher()
+    {
+        $out = array();
 
-			if ( ! $this->shop_basket_model->add_voucher( $_voucher->code ) ) :
+        // --------------------------------------------------------------------------
 
-				$_out['status']	= 400;
-				$_out['error']	= $this->shop_basket_model->last_error();
+        if (!$this->shop_basket_model->removeVoucher()) {
 
-			endif;
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
 
-		else :
+        // --------------------------------------------------------------------------
 
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_voucher_model->last_error();
+        $this->_out($out);
+    }
 
-		endif;
 
-		// --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
 
-		$this->_out( $_out );
-	}
 
+    public function _basket_add_note()
+    {
+        $out  = array();
+        $note = $this->input->get_post('note');
 
-	// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
+        if (!$this->shop_basket_model->addNote($note)) {
 
-	protected function _basket_remove_voucher()
-	{
-		$_out = array();
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
 
-		// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		if ( ! $this->shop_basket_model->remove_voucher() ) :
+        $this->_out($out);
+    }
 
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_basket_model->last_error();
 
-		endif;
+    // --------------------------------------------------------------------------
 
-		// --------------------------------------------------------------------------
 
-		$this->_out( $_out );
-	}
+    protected function _basket_set_currency()
+    {
+        $out      = array();
+        $currency = $this->shop_currency_model->get_by_code($this->input->get_post('currency'));
 
+        if ($currency) {
 
-	// --------------------------------------------------------------------------
+            $this->session->set_userdata('shop_currency', $currency->code);
 
+            if ($this->user_model->is_logged_in()) {
 
-	protected function _basket_set_currency()
-	{
-		$_out		= array();
-		$_currency	= $this->shop_currency_model->get_by_code( $this->input->get_post( 'currency' ) );
+                //  Save to the user object
+                $this->user_model->update(active_user('id'), array('shop_currency' => $currency->code));
+            }
 
-		if ( $_currency ) :
+        } else {
 
-			$this->session->set_userdata( 'shop_currency', $_currency->code );
+            $out['status'] = 400;
+            $out['error']  = $this->shop_currency_model->last_error();
+        }
 
-			if ( $this->user_model->is_logged_in() ) :
+        // --------------------------------------------------------------------------
 
-				//	Save to the user object
-				$this->user_model->update( active_user( 'id' ), array( 'shop_currency' => $_currency->code ) );
+        $this->_out($out);
+    }
 
-			endif;
+    // --------------------------------------------------------------------------
 
-		else :
+    public function _basket_set_as_collection()
+    {
+        $out = array();
 
-			$_out['status']	= 400;
-			$_out['error']	= $this->shop_currency_model->last_error();
+        // --------------------------------------------------------------------------
 
-		endif;
+        if (!$this->shop_basket_model->setDeliveryType('COLLECT')) {
 
-		// --------------------------------------------------------------------------
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
 
-		$this->_out( $_out );
-	}
+        // --------------------------------------------------------------------------
 
+        $this->_out($out);
+    }
 
-	// --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
 
+    public function _basket_set_as_delivery()
+    {
+        $out = array();
+
+        // --------------------------------------------------------------------------
+
+        if (!$this->shop_basket_model->setDeliveryType('DELIVER')) {
+
+            $out['status'] = 400;
+            $out['error']  = $this->shop_basket_model->last_error();
+        }
+
+        // --------------------------------------------------------------------------
+
+        $this->_out($out);
+    }
+
+    // --------------------------------------------------------------------------
 
     public function webhook()
     {
@@ -271,18 +311,17 @@ class NAILS_Shop extends NAILS_API_Controller
         _LOG('RAW GET Data: ' . $this->input->server('QUERY_STRING'));
         _LOG('RAW POST Data: ' . file_get_contents('php://input'));
 
-        $_out = array('status' => 200);
+        $out = array('status' => 200);
 
         // --------------------------------------------------------------------------
 
         $this->load->model('shop/shop_payment_gateway_model');
-        $_result = $this->shop_payment_gateway_model->webhook_complete_payment($this->uri->segment(4), true);
+        $result = $this->shop_payment_gateway_model->webhook_complete_payment($this->uri->segment(4), true);
 
-        if (!$_result) {
+        if (!$result) {
 
-            $_out['status'] = 500;
-            $_out['error']  = $this->shop_payment_gateway_model->last_error();
-
+            $out['status'] = 500;
+            $out['error']  = $this->shop_payment_gateway_model->last_error();
         }
 
         // --------------------------------------------------------------------------
@@ -300,7 +339,7 @@ class NAILS_Shop extends NAILS_API_Controller
             case 'worldpay':
 
                 $format = 'TXT';
-                $_out   = json_encode($_out);
+                $out    = json_encode($out);
                 break;
 
             default:
@@ -310,55 +349,53 @@ class NAILS_Shop extends NAILS_API_Controller
 
         }
 
-        $this->_out($_out, $format, false);
+        $this->_out($out, $format, false);
     }
 
 
-	// --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
 
 
-	public function order()
-	{
-		$_method = $this->uri->segment( 4 );
+    public function order()
+    {
+        $method = $this->uri->segment(4);
 
-		if ( method_exists( $this, '_order_' . $_method ) ) :
+        if (method_exists($this, '_order_' . $method)) {
 
-			$this->load->model( 'shop/shop_order_model' );
-			$this->{'_order_' . $_method}();
+            $this->load->model('shop/shop_order_model');
+            $this->{'_order_' . $method}();
 
-		else :
+        } else {
 
-			$this->_method_not_found( 'order/' . $_method );
-
-		endif;
-	}
-
-
-	// --------------------------------------------------------------------------
+            $this->_method_not_found('order/' . $method);
+        }
+    }
 
 
-	protected function _order_status()
-	{
-		$_out	= array();
-		$_order	= $this->shop_order_model->get_by_ref( $this->input->get_post( 'ref' ) );
+    // --------------------------------------------------------------------------
 
-		if ( $_order ) :
 
-			$_out['order']				= new stdClass();
-			$_out['order']->status		= $_order->status;
-			$_out['order']->is_recent	= ( time() - strtotime( $_order->created ) ) < 300;
+    protected function _order_status()
+    {
+        $out   = array();
+        $order = $this->shop_order_model->get_by_ref($this->input->get_post('ref'));
 
-		else :
+        if ($order) {
 
-			$_out['status']	= 400;
-			$_out['error']	= '"' . $this->input->get_post( 'ref' ) . '" is not a valid order ref';
+            $out['order']            = new stdClass();
+            $out['order']->status    = $order->status;
+            $out['order']->is_recent = (time() - strtotime($order->created)) < 300;
 
-		endif;
+        } else {
 
-		// --------------------------------------------------------------------------
+            $out['status']  = 400;
+            $out['error']   = '"' . $this->input->get_post('ref') . '" is not a valid order ref';
+        }
 
-		$this->_out( $_out );
-	}
+        // --------------------------------------------------------------------------
+
+        $this->_out($out);
+    }
 }
 
 
@@ -389,13 +426,10 @@ class NAILS_Shop extends NAILS_API_Controller
  *
  **/
 
-if ( ! defined( 'NAILS_ALLOW_EXTENSION_SHOP' ) ) :
+if (!defined('NAILS_ALLOW_EXTENSION_SHOP')) {
 
-	class Shop extends NAILS_Shop
-	{
-	}
+    class Shop extends NAILS_Shop
+    {
+    }
+}
 
-endif;
-
-/* End of file shop.php */
-/* Location: ./modules/api/controllers/shop.php */
