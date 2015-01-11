@@ -1,25 +1,20 @@
 <?php
 
-/**
- * Name:        Shop API
- *
- * Description: This controller handles Shop API methods
- *
- **/
-
+//  Include NAILS_API_Controller; executes common API functionality.
 require_once '_api.php';
-
-/**
- * OVERLOADING NAILS' API MODULES
- *
- * Note the name of this class; done like this to allow apps to extend this class.
- * Read full explanation at the bottom of this file.
- *
- **/
 
 use Omnipay\Common;
 use Omnipay\Omnipay;
 
+/**
+ * Shop API end points
+ *
+ * @package     Nails
+ * @subpackage  module-api
+ * @category    Controller
+ * @author      Nails Dev Team
+ * @link
+ */
 class NAILS_Shop extends NAILS_API_Controller
 {
     /**
@@ -432,4 +427,3 @@ if (!defined('NAILS_ALLOW_EXTENSION_SHOP')) {
     {
     }
 }
-

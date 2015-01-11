@@ -1,22 +1,17 @@
-<?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php
 
-/**
- * Name:		Auth API
- *
- * Description:	This controller handles auth API methods
- *
- **/
-
+//  Include NAILS_API_Controller; executes common API functionality.
 require_once '_api.php';
 
 /**
- * OVERLOADING NAILS' API MODULES
+ * Auth API end points
  *
- * Note the name of this class; done like this to allow apps to extend this class.
- * Read full explanation at the bottom of this file.
- *
- **/
-
+ * @package     Nails
+ * @subpackage  module-api
+ * @category    Controller
+ * @author      Nails Dev Team
+ * @link
+ */
 class NAILS_Auth extends NAILS_API_Controller
 {
 	private $_authorised;
@@ -199,6 +194,3 @@ if ( ! defined( 'NAILS_ALLOW_EXTENSION_AUTH' ) ) :
 	}
 
 endif;
-
-/* End of file auth.php */
-/* Location: ./modules/api/controllers/auth.php */

@@ -1,22 +1,17 @@
-<?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php
 
-/**
- * Name:		Admin API
- *
- * Description:	This controller handles API methods relating to admin
- *
- **/
-
+//  Include NAILS_API_Controller; executes common API functionality.
 require_once '_api.php';
 
 /**
- * OVERLOADING NAILS' API MODULES
+ * Admin API end points
  *
- * Note the name of this class; done like this to allow apps to extend this class.
- * Read full explanation at the bottom of this file.
- *
- **/
-
+ * @package     Nails
+ * @subpackage  module-api
+ * @category    Controller
+ * @author      Nails Dev Team
+ * @link
+ */
 class NAILS_Admin extends NAILS_API_Controller
 {
 	private $_authorised;
@@ -117,7 +112,7 @@ class NAILS_Admin extends NAILS_API_Controller
 		foreach( $_pref_raw AS $module => $options ) :
 
 			$_pref->{$module}		= new stdClass();
-			$_pref->{$module}->open	= string_to_boolean( $options['open'] );
+			$_pref->{$module}->open	= stringToBoolean( $options['open'] );
 
 		endforeach;
 
@@ -233,6 +228,3 @@ if ( ! defined( 'NAILS_ALLOW_EXTENSION_ADMIN' ) ) :
 	}
 
 endif;
-
-/* End of file admin.php */
-/* Location: ./modules/api/controllers/admin.php */

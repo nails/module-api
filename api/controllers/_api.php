@@ -1,13 +1,14 @@
 <?php
 
 /**
- * Name:        NALS_API_Controller
+ * This class provides some common API controller functionality
  *
- * Description: This controller executes various bits of common admin API functionality
- *
- **/
-
-
+ * @package     Nails
+ * @subpackage  module-api
+ * @category    Controller
+ * @author      Nails Dev Team
+ * @link
+ */
 class NAILS_API_Controller extends NAILS_Controller
 {
     /**
@@ -176,6 +177,3 @@ class NAILS_API_Controller extends NAILS_Controller
          exit(0);
     }
 }
-
-/* End of file _api.php */
-/* Location: ./application/modules/api/controllers/_api.php */
