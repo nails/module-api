@@ -31,7 +31,7 @@ class NAILS_Shop extends NAILS_API_Controller
         // --------------------------------------------------------------------------
 
         //  Check this module is enabled in settings
-        if (!module_is_enabled('shop')) {
+        if (!isModuleEnabled('shop')) {
 
             //  Cancel execution, module isn't enabled
             $this->_method_not_found($this->uri->segment(2));

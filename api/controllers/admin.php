@@ -42,11 +42,11 @@ class NAILS_Admin extends NAILS_API_Controller
 		//	Constructor mabobs.
 
 		//	IP whitelist?
-		$_ip_whitelist = (array) app_setting( 'whitelist', 'admin' );
+		$whitelistIp = (array) app_setting( 'whitelist', 'admin' );
 
-		if ( $_ip_whitelist ) :
+		if ( $whitelistIp ) :
 
-			if ( ! ip_in_range( $this->input->ip_address(), $_ip_whitelist ) ) :
+			if ( ! isIpInRange( $this->input->ip_address(), $whitelistIp ) ) :
 
 				show_404();
 

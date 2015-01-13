@@ -39,7 +39,7 @@ class NAILS_Cms extends NAILS_API_Controller
 
 		// --------------------------------------------------------------------------
 
-		if ( ! module_is_enabled( 'cms' ) ) :
+		if ( ! isModuleEnabled( 'cms' ) ) :
 
 			//	Cancel execution, module isn't enabled
 			show_404();
