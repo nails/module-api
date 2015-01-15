@@ -109,7 +109,7 @@ class NAILS_Admin extends NAILS_API_Controller
 		$_pref_raw	= $this->input->get_post( 'preferences' );
 		$_pref		= new stdClass();
 
-		foreach ( $_pref_raw AS $module => $options ) :
+		foreach ( $_pref_raw as $module => $options ) :
 
 			$_pref->{$module}		= new stdClass();
 			$_pref->{$module}->open	= stringToBoolean( $options['open'] );

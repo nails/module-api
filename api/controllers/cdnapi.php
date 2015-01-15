@@ -174,7 +174,7 @@ class NAILS_Cdnapi extends NAILS_API_Controller
 									$_out['object_url']	= array();
 									$_sizes				= explode( ',', $_format[2] );
 
-									foreach ( $_sizes AS $sizes ) :
+									foreach ( $_sizes as $sizes ) :
 
 										$_size = explode( 'x', $sizes );
 
@@ -195,7 +195,7 @@ class NAILS_Cdnapi extends NAILS_API_Controller
 									$_out['object_url']	= array();
 									$_sizes				= explode( ',', $_format[2] );
 
-									foreach ( $_sizes AS $sizes ) :
+									foreach ( $_sizes as $sizes ) :
 
 										$_size = explode( 'x', $sizes );
 
