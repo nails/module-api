@@ -14,188 +14,228 @@ require_once '_api.php';
  */
 class NAILS_Admin extends NAILS_API_Controller
 {
-	private $_authorised;
-	private $_error;
+    private $_authorised;
+    private $_error;
 
+    // --------------------------------------------------------------------------
 
-	// --------------------------------------------------------------------------
+    /**
+     * Constructor
+     **/
+    public function __construct()
+    {
+        parent::__construct();
 
+        // --------------------------------------------------------------------------
 
-	/**
-	 * Constructor
-	 *
-	 * @access	public
-	 * @return	void
-	 *
-	 **/
-	public function __construct()
-	{
-		parent::__construct();
+        $this->_authorised = true;
+        $this->_error      = '';
 
-		// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		$this->_authorised	= TRUE;
-		$this->_error		= '';
+        //  Constructor mabobs.
 
-		// --------------------------------------------------------------------------
+        //  IP whitelist?
+        $whitelistIp = (array) app_setting('whitelist', 'admin');
 
-		//	Constructor mabobs.
+        if ($whitelistIp) {
 
-		//	IP whitelist?
-		$whitelistIp = (array) app_setting( 'whitelist', 'admin' );
+            if (!isIpInRange($this->input->ip_address(), $whitelistIp)) {
 
-		if ( $whitelistIp ) :
+                show_404();
+            }
+        }
 
-			if ( ! isIpInRange( $this->input->ip_address(), $whitelistIp ) ) :
+        //  Only logged in users
+        if (!$this->user_model->is_logged_in()) {
 
-				show_404();
+            $this->_authorised = false;
+            $this->_error      = lang('auth_require_session');
 
-			endif;
+        //  Only admins
+        } elseif (!$this->user_model->is_admin()) {
 
-		endif;
+            $this->_authorised = false;
+            $this->_error      = lang('auth_require_admin');
+        }
+    }
 
-		//	Only logged in users
-		if ( ! $this->user_model->is_logged_in() ) :
+    // --------------------------------------------------------------------------
 
-			$this->_authorised	= FALSE;
-			$this->_error		= lang( 'auth_require_session' );
+    /**
+     * Routes requests to nav/*
+     * @return void
+     */
+    public function nav()
+    {
+        if (!$this->_authorised) {
 
-		//	Only admins
-		elseif ( ! $this->user_model->is_admin() ) :
+            $_out           = array();
+            $_out['status'] = 401;
+            $_out['error']  = $this->_error;
+            $this->_out($_out);
+            return;
+        }
 
-			$this->_authorised	= FALSE;
-			$this->_error		= lang( 'auth_require_admin' );
+        // --------------------------------------------------------------------------
 
-		endif;
-	}
+        $method = $this->uri->segment(4);
 
+        if (method_exists($this, '_nav_' . $method)) {
 
-	// --------------------------------------------------------------------------
+            $this->{'_nav_' . $method}();
 
+        } else {
 
-	public function nav()
-	{
-		if ( ! $this->_authorised ) :
+            $this->_method_not_found('nav/' . $method);
+        }
+    }
 
-			$_out = array();
-			$_out['status'] = 401;
-			$_out['error']	= $this->_error;
-			$this->_out( $_out );
-			return;
+    // --------------------------------------------------------------------------
 
-		endif;
+    /**
+     * Saves the user's admin nav preferences
+     * @return void
+     */
+    protected function _nav_save()
+    {
+        $prefRaw = $this->input->get_post('preferences');
+        $pref     = new stdClass();
 
-		// --------------------------------------------------------------------------
+        foreach ($prefRaw as $module => $options) :
 
-		$_method = $this->uri->segment( 4 );
+            $pref->{$module}       = new stdClass();
+            $pref->{$module}->open = stringToBoolean($options['open']);
 
-		if ( method_exists( $this, '_nav_' . $_method ) ) :
+        endforeach;
 
-			$this->{'_nav_' . $_method}();
+        $this->load->model('admin/admin_model');
+        $this->admin_model->set_admin_data('nav', $pref);
 
-		else :
+        $this->_out();
+    }
 
-			$this->_method_not_found( 'nav/' . $_method );
+    // --------------------------------------------------------------------------
 
-		endif;
-	}
+    /**
+     * Resets a user's admin nav preferences
+     * @return void
+     */
+    protected function _nav_reset()
+    {
+        $this->load->model('admin/admin_model');
+        $this->admin_model->unset_admin_data('nav');
 
+        $this->_out();
+    }
 
-	// --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
 
+    /**
+     * Routes requests to users/*
+     * @return void
+     */
+    public function users()
+    {
+        if (!$this->_authorised) {
 
-	public function _nav_save()
-	{
-		$_pref_raw	= $this->input->get_post( 'preferences' );
-		$_pref		= new stdClass();
+            $_out           = array();
+            $_out['status'] = 401;
+            $_out['error']  = $this->_error;
+            $this->_out($_out);
+            return;
+        }
 
-		foreach ( $_pref_raw as $module => $options ) :
+        // --------------------------------------------------------------------------
 
-			$_pref->{$module}		= new stdClass();
-			$_pref->{$module}->open	= stringToBoolean( $options['open'] );
+        $method = $this->uri->segment(4);
 
-		endforeach;
+        if (method_exists($this, '_users_' . $_method)) {
 
-		$this->load->model( 'admin/admin_model' );
-		$this->admin_model->set_admin_data( 'nav', $_pref );
+            $this->{'_users_' . $method}();
 
-		$this->_out();
-	}
+        } else {
 
+            $this->_method_not_found('users/' . $method);
 
-	// --------------------------------------------------------------------------
+        }
+    }
 
+    // --------------------------------------------------------------------------
 
-	public function _nav_reset()
-	{
-		$this->load->model( 'admin/admin_model' );
-		$this->admin_model->unset_admin_data( 'nav' );
+    /**
+     * Searches users
+     * @return void
+     */
+    protected function _users_search()
+    {
+        $avatarSize = $this->input->get('avatarSize') ? $this->input->get('avatarSize') : 50;
+        $term       = $this->input->get('term');
+        $users      = $this->user_model->get_all(null, null, null, null, $term);
+        $out        = array('users' => array());
 
-		$this->_out();
-	}
+        foreach ($users as $user) {
 
+            $temp              = new stdClass();
+            $temp->id          = $user->id;
+            $temp->email       = $user->email;
+            $temp->first_name  = $user->first_name;
+            $temp->last_name   = $user->last_name;
+            $temp->gender      = $user->gender;
+            $temp->profile_img = cdn_avatar($temp->id, $avatarSize, $avatarSize);
 
-	// --------------------------------------------------------------------------
+            $out['users'][] = $temp;
+        }
 
+        $this->_out($out);
+    }
 
-	public function users()
-	{
-		if ( ! $this->_authorised ) :
+    // --------------------------------------------------------------------------
 
-			$_out = array();
-			$_out['status'] = 401;
-			$_out['error']	= $this->_error;
-			$this->_out( $_out );
-			return;
+    /**
+     * Routes requests to shop/*
+     * @return void
+     */
+    public function shop()
+    {
+        if (!$this->_authorised) {
 
-		endif;
+            $_out           = array();
+            $_out['status'] = 401;
+            $_out['error']  = $this->_error;
+            $this->_out($_out);
+            return;
+        }
 
-		// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		$_method = $this->uri->segment( 4 );
+        $method = $this->uri->segment(4);
 
-		if ( method_exists( $this, '_users_' . $_method ) ) :
+        if (method_exists($this, '_shop_' . $method)) {
 
-			$this->{'_users_' . $_method}();
+            $this->{'_shop_' . $method}();
 
-		else :
+        } else {
 
-			$this->_method_not_found( 'users/' . $_method );
+            $this->_method_not_found('users/' . $method);
 
-		endif;
-	}
+        }
+    }
 
+    // --------------------------------------------------------------------------
 
-	// --------------------------------------------------------------------------
+    protected function _shop_voucher_generate_code()
+    {
+        $out = array();
 
+        $this->load->model('shop/shop_voucher_model');
 
-	private function _users_search()
-	{
-		$avatarSize = $this->input->get('avatarSize') ? $this->input->get('avatarSize') : 50;
-		$term       = $this->input->get('term');
-		$users      = $this->user_model->get_all(null, null, null, null, $term);
-		$out        = array('users' => array());
-
-		foreach ($users as $user) {
-
-			$temp              = new stdClass();
-			$temp->id          = $user->id;
-			$temp->email       = $user->email;
-			$temp->first_name  = $user->first_name;
-			$temp->last_name   = $user->last_name;
-			$temp->gender      = $user->gender;
-			$temp->profile_img = cdn_avatar($temp->id, $avatarSize, $avatarSize);
-
-			$out['users'][] = $temp;
-		}
-
-		$this->_out($out);
-	}
+        $out['code'] = $this->shop_voucher_model->generateValidCode();
+        $this->_out($out);
+    }
 }
 
-
 // --------------------------------------------------------------------------
-
 
 /**
  * OVERLOADING NAILS' API MODULES
@@ -221,10 +261,9 @@ class NAILS_Admin extends NAILS_API_Controller
  *
  **/
 
-if ( ! defined( 'NAILS_ALLOW_EXTENSION_ADMIN' ) ) :
+if (!defined('NAILS_ALLOW_EXTENSION_ADMIN')) {
 
-	class Admin extends NAILS_Admin
-	{
-	}
-
-endif;
+    class Admin extends NAILS_Admin
+    {
+    }
+}
