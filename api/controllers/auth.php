@@ -124,7 +124,7 @@ class NAILS_Auth extends NAILS_API_Controller
 
 			//	Login failed
 			$_out['status']	= 401;
-			$_out['error']	= $this->auth_model->get_errors();
+			$_out['error']	= $this->auth_model->last_error();
 			$_out['code']	= 1;
 
 		endif;
