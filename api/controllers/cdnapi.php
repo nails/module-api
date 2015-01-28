@@ -30,7 +30,7 @@ class NAILS_Cdnapi extends NAILS_API_Controller
         // --------------------------------------------------------------------------
 
         //  Check this module is enabled in settings
-        if (!isModuleEnabled('cdn')) {
+        if (!isModuleEnabled('nailsapp/module-cdn')) {
 
             //  Cancel execution, module isn't enabled
             $this->methodNotFound($this->uri->segment(2));
