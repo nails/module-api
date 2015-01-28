@@ -15,6 +15,7 @@ use Omnipay\Omnipay;
  * @author      Nails Dev Team
  * @link
  */
+
 class NAILS_Shop extends NAILS_API_Controller
 {
     /**
@@ -34,7 +35,7 @@ class NAILS_Shop extends NAILS_API_Controller
         if (!isModuleEnabled('shop')) {
 
             //  Cancel execution, module isn't enabled
-            $this->_method_not_found($this->uri->segment(2));
+            $this->methodNotFound($this->uri->segment(2));
         }
 
         // --------------------------------------------------------------------------
@@ -56,7 +57,7 @@ class NAILS_Shop extends NAILS_API_Controller
 
         } else {
 
-            $this->_method_not_found('basket/' . $method);
+            $this->methodNotFound('basket/' . $method);
         }
     }
 
@@ -329,7 +330,7 @@ class NAILS_Shop extends NAILS_API_Controller
          * back as non-200.
          */
 
-        switch(strtolower($this->uri->segment(4))) {
+        switch (strtolower($this->uri->segment(4))) {
 
             case 'worldpay':
 
@@ -362,7 +363,7 @@ class NAILS_Shop extends NAILS_API_Controller
 
         } else {
 
-            $this->_method_not_found('order/' . $method);
+            $this->methodNotFound('order/' . $method);
         }
     }
 

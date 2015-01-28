@@ -12,365 +12,341 @@ require_once '_api.php';
  * @author      Nails Dev Team
  * @link
  */
+
 class NAILS_Cdnapi extends NAILS_API_Controller
 {
-	private $_authorised;
-	private $_error;
+    private $_authorised;
+    private $_error;
 
+    // --------------------------------------------------------------------------
 
-	// --------------------------------------------------------------------------
+    /**
+     * Construct the controller
+     */
+    public function __construct()
+    {
+        parent::__construct();
 
+        // --------------------------------------------------------------------------
 
-	/**
-	 * Constructor
-	 *
-	 * @access	public
-	 * @return	void
-	 *
-	 **/
-	public function __construct()
-	{
-		parent::__construct();
+        //  Check this module is enabled in settings
+        if (!isModuleEnabled('cdn')) {
 
-		// --------------------------------------------------------------------------
+            //  Cancel execution, module isn't enabled
+            $this->methodNotFound($this->uri->segment(2));
+        }
 
-		//	Check this module is enabled in settings
-		if ( ! isModuleEnabled( 'cdn' ) ) :
+        // --------------------------------------------------------------------------
 
-			//	Cancel execution, module isn't enabled
-			$this->_method_not_found( $this->uri->segment( 2 ) );
+        $this->load->library('cdn/cdn');
+    }
 
-		endif;
+    // --------------------------------------------------------------------------
 
-		// --------------------------------------------------------------------------
+    /**
+     * Generate an upload token for the logged in user
+     * @return void
+     */
+    public function get_upload_token()
+    {
+        //  Define $out array
+        $out = array();
 
+        // --------------------------------------------------------------------------
 
-		$this->load->library( 'cdn/cdn' );
-	}
+        if ($this->user_model->is_logged_in()) {
 
+            $out['token'] = $this->cdn->generate_api_upload_token(active_user('id'));
 
-	// --------------------------------------------------------------------------
+        } else {
 
+            $out['status'] = 400;
+            $out['error']  = 'You must be logged in to generate an upload token.';
+        }
 
-	public function get_upload_token()
-	{
-		//	Define $_out array
-		$_out = array();
+        // --------------------------------------------------------------------------
 
-		// --------------------------------------------------------------------------
+        $this->_out($out);
+    }
 
-		if ( $this->user_model->is_logged_in() ) :
+    // --------------------------------------------------------------------------
 
-			$_out['token'] = $this->cdn->generate_api_upload_token( active_user( 'id' ) );
+    /**
+     * Upload a new object to the CDN
+     * @return void
+     */
+    public function object_create()
+    {
+        //  Define $out array
+        $out = array();
 
-		else :
+        // --------------------------------------------------------------------------
 
-			$_out['status'] = 400;
-			$_out['error']	= 'You must be logged in to generate an upload token.';
+        if (!$this->user_model->is_logged_in()) {
 
-		endif;
+            //  User is not logged in must supply a valid upload token
+            $token = $this->input->get_post('token');
 
-		// --------------------------------------------------------------------------
+            if (!$token) {
 
-		$this->_out( $_out );
-	}
+                //  Sent as a header?
+                $token = $this->input->get_request_header('X-cdn-token');
+            }
 
+            $user = $this->cdn->validate_api_upload_token($token);
 
-	// --------------------------------------------------------------------------
+            if (!$user) {
 
+                $out['status'] = 400;
+                $out['error']  = $this->cdn->last_error();
 
-	public function object_create()
-	{
-		//	Define $_out array
-		$_out = array();
+                $this->_out($out);
+                return;
 
-		// --------------------------------------------------------------------------
+            } else {
 
-		if ( ! $this->user_model->is_logged_in() ) :
+                $this->user_model->set_active_user($user);
+            }
+        }
 
-			//	User is not logged in must supply a valid upload token
-			$_token = $this->input->get_post( 'token' );
+        // --------------------------------------------------------------------------
 
-			if ( ! $_token ) :
+        //  Uploader verified, bucket defined and valid?
+        $bucket = $this->input->get_post('bucket');
 
-				//	Sent as a header?
-				$_token = $this->input->get_request_header( 'X-cdn-token' );
+        if (!$bucket) {
 
-			endif;
+            //  Sent as a header?
+            $bucket = $this->input->get_request_header('X-cdn-bucket');
+        }
 
-			$_user = $this->cdn->validate_api_upload_token( $_token );
+        if (!$bucket) {
 
-			if ( ! $_user ) :
+            $out['status'] = 400;
+            $out['error']  = 'Bucket not defined.';
 
-				$_out['status']	= 400;
-				$_out['error']	= $this->cdn->last_error();
+            $this->_out($out);
+            return;
+        }
 
-				$this->_out( $_out );
-				return;
+        // --------------------------------------------------------------------------
 
-			else :
+        //  Attempt upload
+        $upload = $this->cdn->object_create('upload', $bucket);
 
-				$this->user_model->set_active_user( $_user );
+        if ($upload) {
 
-			endif;
+            //  Success!Return as per the user's preference
+            $return = $this->input->post('return');
 
-		endif;
+            if (!$return) {
 
-		// --------------------------------------------------------------------------
+                //  Sent as a header?
+                $return = $this->input->get_request_header('X-cdn-return');
+            }
 
-		//	Uploader verified, bucket defined and valid?
-		$_bucket = $this->input->get_post( 'bucket' );
+            if ($return) {
 
-		if ( ! $_bucket ) :
+                $format = explode('|', $return);
 
-			//	Sent as a header?
-			$_bucket = $this->input->get_request_header( 'X-cdn-bucket' );
+                switch (strtoupper($format[0])) {
 
-		endif;
+                    //  URL
+                    case 'URL' :
 
-		if ( ! $_bucket ) :
+                        if (isset($format[1])) {
 
-			$_out['status']	= 400;
-			$_out['error']	= 'Bucket not defined.';
+                            switch (strtoupper($format[1])) {
 
-			$this->_out( $_out );
-			return;
+                                case 'THUMB':
 
-		endif;
+                                    //  Generate a url for each request
+                                    $out['object_url'] = array();
+                                    $sizes             = explode(',', $format[2]);
 
-		// --------------------------------------------------------------------------
+                                    foreach ($sizes as $size) {
 
-		//	Attempt upload
-		$_upload = $this->cdn->object_create( 'upload', $_bucket );
+                                        $dimensions = explode('x', $size);
 
-		if ( $_upload ) :
+                                        $w = isset($dimensions[0]) ? $dimensions[0] : '';
+                                        $h = isset($dimensions[1]) ? $dimensions[1] : '';
 
-			//	Success! Return as per the user's preference
-			$_return = $this->input->post( 'return' );
+                                        $out['object_url'][] = cdn_thumb($upload->id, $w, $h);
+                                    }
 
-			if ( ! $_return ) :
+                                    $out['object_id']  = $upload->id;
+                                    break;
 
-				//	Sent as a header?
-				$_return = $this->input->get_request_header( 'X-cdn-return' );
+                                case 'SCALE':
 
-			endif;
+                                    //  Generate a url for each request
+                                    $out['object_url'] = array();
+                                    $sizes             = explode(',', $format[2]);
 
-			if ( $_return ) :
+                                    foreach ($sizes as $size) {
 
-				$_format = explode( '|', $_return );
+                                        $dimensions = explode('x', $size);
 
-				switch( strtoupper( $_format[0] ) ) :
+                                        $w = isset($dimensions[0]) ? $dimensions[0] : '';
+                                        $h = isset($dimensions[1]) ? $dimensions[1] : '';
 
-					//	URL
-					case 'URL' :
+                                        $out['object_url'][] = cdn_scale($upload->id, $w, $h);
+                                    }
 
-						if ( isset( $_format[1] ) ) :
+                                    $out['object_id']  = $upload->id;
+                                    break;
 
-							switch( strtoupper( $_format[1] ) ) :
+                                case 'SERVE_DL':
+                                case 'DOWNLOAD':
+                                case 'SERVE_DOWNLOAD':
 
-								case 'THUMB' :
+                                    $out['object_url'] = cdn_serve($upload->id, true);
+                                    $out['object_id']  = $upload->id;
+                                    break;
 
-									//	Generate a url for each request
-									$_out['object_url']	= array();
-									$_sizes				= explode( ',', $_format[2] );
+                                case 'SERVE':
+                                default:
 
-									foreach ( $_sizes as $sizes ) :
+                                    $out['object_url'] = cdn_serve($upload->id);
+                                    $out['object_id']  = $upload->id;
+                                    break;
+                            }
 
-										$_size = explode( 'x', $sizes );
+                        } else {
 
-										$_w = isset( $_size[0] )	? $_size[0] : '';
-										$_h = isset( $_size[1] )	? $_size[1] : '';
+                            //  Unknow, return the serve URL & ID
+                            $out['object_url'] = cdn_serve($upload->id);
+                            $out['object_id']  = $upload->id;
+                        }
+                        break;
 
-										$_out['object_url'][] = cdn_thumb( $_upload->id, $_w, $_h );
+                    default:
 
-									endforeach;
+                        //  just return the object
+                        $out['object'] = $upload;
+                        break;
+                }
 
-									$_out['object_id']	= $_upload->id;
+            } else {
 
-								break;
+                //  just return the object
+                $out['object'] = $upload;
+            }
 
-								case 'SCALE' :
+        } else {
 
-									//	Generate a url for each request
-									$_out['object_url']	= array();
-									$_sizes				= explode( ',', $_format[2] );
+            $out['status'] = 400;
+            $out['error']  = $this->cdn->last_error();
+        }
 
-									foreach ( $_sizes as $sizes ) :
+        // --------------------------------------------------------------------------
 
-										$_size = explode( 'x', $sizes );
+        /**
+         * Make sure the _out() method doesn't send a header, annoyingly SWFupload does
+         * not return the server response to the script when a non-200 status code is
+         * detected
+         */
 
-										$_w = isset( $_size[0] )	? $_size[0] : '';
-										$_h = isset( $_size[1] )	? $_size[1] : '';
+        $this->_out($out);
+    }
 
-										$_out['object_url'][] = cdn_scale( $_upload->id, $_w, $_h );
+    // --------------------------------------------------------------------------
 
-									endforeach;
+    /**
+     * Delete an object from the CDN
+     * @return void
+     */
+    public function object_delete()
+    {
+        /**
+         * @TODO: Have a good think about security here, somehow verify that this
+         * person has permission to delete objects. Perhaps only an objects creator
+         * or a super user can delete. Maybe have a CDN permission?
+         */
 
-									$_out['object_id']	= $_upload->id;
+        //  Define $out array
+        $out = array();
 
-								break;
+        // --------------------------------------------------------------------------
 
-								case 'SERVE_DL' :
-								case 'DOWNLOAD' :
-								case 'SERVE_DOWNLOAD' :
+        $objectId = $this->input->get_post('object_id');
+        $delete   = $this->cdn->object_delete($objectId);
 
-									$_out['object_url']	= cdn_serve( $_upload->id, TRUE );
-									$_out['object_id']	= $_upload->id;
+        if (!$delete) {
 
-								break;
+            $out['status'] = 400;
+            $out['error']  = $this->cdn->last_error();
+        }
 
-								case 'SERVE' :
-								default :
+        $this->_out($out);
+    }
 
-									$_out['object_url']	= cdn_serve( $_upload->id );
-									$_out['object_id']	= $_upload->id;
+    // --------------------------------------------------------------------------
 
-								break;
+    /**
+     * Add an object to a tag
+     * @return void
+     */
+    public function add_object_tag()
+    {
+        $objectId = $this->input->get('object_id');
+        $tagId    = $this->input->get('tag_id');
+        $out      = array();
 
-							endswitch;
+        $added = $this->cdn->object_tag_add($objectId, $tagId);
 
-						else :
+        if ($added) {
 
-							//	Unknow, return the serve URL & ID
-							$_out['object_url']	= cdn_serve( $_upload->id );
-							$_out['object_id']	= $_upload->id;
+            //  Get new count for this tag
+            $out = array(
+                'new_total' => $this->cdn->object_tag_count($tagId)
+           );
 
-						endif;
+        } else {
 
-					break;
+            $out = array(
+                'status' => 400,
+                'error'  => $this->cdn->last_error()
+           );
+        }
 
-					// --------------------------------------------------------------------------
+        $this->_out($out);
+    }
 
-					default:
+    // --------------------------------------------------------------------------
 
-						//	just return the object
-						$_out['object'] = $_upload;
+    /**
+     * Remove an object from a tag
+     * @return void
+     */
+    public function delete_object_tag()
+    {
+        $objectId = $this->input->get('object_id');
+        $tagId    = $this->input->get('tag_id');
+        $out      = array();
 
-					break;
+        $deleted = $this->cdn->object_tag_delete($objectId, $tagId);
 
-				endswitch;
+        if ($deleted) {
 
-			else :
+            //  Get new count for this tag
+            $out = array(
+                'new_total' => $this->cdn->object_tag_count($tagId)
+           );
 
-				//	just return the object
-				$_out['object'] = $_upload;
+        } else {
 
-			endif;
+            $out = array(
+                'status' => 400,
+                'error'  => $this->cdn->last_error()
+           );
+        }
 
-		else :
-
-			$_out['status']	= 400;
-			$_out['error']	= $this->cdn->last_error();
-
-		endif;
-
-		// --------------------------------------------------------------------------
-
-		//	Make sure the _out() method doesn't send a header, annoyingly SWFupload does
-		//	not return the server response to the script when a non-200 status code is detected
-
-		$this->_out( $_out );
-	}
-
-
-	// --------------------------------------------------------------------------
-
-
-	public function object_delete()
-	{
-		//	TODO: Have a good think about security here, somehow verify that this
-		//	person has permission to delete objects. Perhaps only an objects creator
-		//	or a super user can delete. Maybe have a CDN permission?
-
-		//	Define $_out array
-		$_out = array();
-
-		// --------------------------------------------------------------------------
-
-		$_object_id	= $this->input->get_post( 'object_id' );
-		$_delete	= $this->cdn->object_delete( $_object_id );
-
-		if ( ! $_delete ) :
-
-			$_out['status']	= 400;
-			$_out['error']	= $this->cdn->last_error();
-
-		endif;
-
-		// --------------------------------------------------------------------------
-
-		$this->_out( $_out );
-	}
-
-	// --------------------------------------------------------------------------
-
-
-	public function add_object_tag()
-	{
-		$_object_id	= $this->input->get( 'object_id' );
-		$_tag_id	= $this->input->get( 'tag_id' );
-		$_out		= array();
-
-		$_added = $this->cdn->object_tag_add( $_object_id, $_tag_id );
-
-		if ( $_added ) :
-
-			//	Get new count for this tag
-			$_out = array(
-				'new_total'	=> $this->cdn->object_tag_count( $_tag_id )
-			);
-
-		else :
-
-			$_out = array(
-				'status'	=> 400,
-				'error'		=> $this->cdn->last_error()
-			);
-
-		endif;
-
-		// --------------------------------------------------------------------------
-
-		$this->_out( $_out );
-	}
-
-
-	// --------------------------------------------------------------------------
-
-
-	public function delete_object_tag()
-	{
-		$_object_id	= $this->input->get( 'object_id' );
-		$_tag_id	= $this->input->get( 'tag_id' );
-		$_out		= array();
-
-		$_deleted = $this->cdn->object_tag_delete( $_object_id, $_tag_id );
-
-		if ( $_deleted ) :
-
-			//	Get new count for this tag
-			$_out = array(
-				'new_total'	=> $this->cdn->object_tag_count( $_tag_id )
-			);
-
-		else :
-
-			$_out = array(
-				'status'	=> 400,
-				'error'		=> $this->cdn->last_error()
-			);
-
-		endif;
-
-		// --------------------------------------------------------------------------
-
-		$this->_out( $_out );
-	}
+        $this->_out($out);
+    }
 }
 
-
 // --------------------------------------------------------------------------
-
 
 /**
  * OVERLOADING NAILS' API MODULES
@@ -396,10 +372,9 @@ class NAILS_Cdnapi extends NAILS_API_Controller
  *
  **/
 
-if ( ! defined( 'NAILS_ALLOW_EXTENSION_CDN' ) ) :
+if (!defined('NAILS_ALLOW_EXTENSION_CDNAPI')) {
 
-	class Cdnapi extends NAILS_Cdnapi
-	{
-	}
-
-endif;
+    class Cdnapi extends NAILS_Cdnapi
+    {
+    }
+}

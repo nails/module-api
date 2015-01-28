@@ -1,29 +1,23 @@
-<?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php
 
-/**
- * Name:		API
- *
- * Description:	This controller handles generic API methods
- *
- **/
-
+//  Include NAILS_API_Controller; executes common API functionality.
 require_once '_api.php';
 
 /**
- * OVERLOADING NAILS' API MODULES
+ * This class does nothing but is required for ModularExtensions to behave as expected
  *
- * Note the name of this class; done like this to allow apps to extend this class.
- * Read full explanation at the bottom of this file.
- *
- **/
+ * @package     Nails
+ * @subpackage  module-api
+ * @category    Controller
+ * @author      Nails Dev Team
+ * @link
+ */
 
 class NAILS_Api extends NAILS_API_Controller
 {
 }
 
-
 // --------------------------------------------------------------------------
-
 
 /**
  * OVERLOADING NAILS' API MODULES
@@ -49,13 +43,9 @@ class NAILS_Api extends NAILS_API_Controller
  *
  **/
 
-if ( ! defined( 'NAILS_ALLOW_EXTENSION_API' ) ) :
+if (!defined('NAILS_ALLOW_EXTENSION_API')) {
 
 	class Api extends NAILS_Api
 	{
 	}
-
-endif;
-
-/* End of file api.php */
-/* Location: ./modules/api/controllers/api.php */
+}

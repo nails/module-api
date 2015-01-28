@@ -9,16 +9,12 @@
  * @author      Nails Dev Team
  * @link
  */
+
 class NAILS_API_Controller extends NAILS_Controller
 {
     /**
-     *  Execute common functionality
-     *
-     *  @access public
-     *  @param  none
-     *  @return void
-     *
-     **/
+     * Construct the controller
+     */
     public function __construct()
     {
         parent::__construct();
@@ -31,15 +27,13 @@ class NAILS_API_Controller extends NAILS_Controller
 
     // --------------------------------------------------------------------------
 
-
     /**
-     *  Take the input and spit it out as JSON
-     *
-     *  @access public
-     *  @param  none
-     *  @return void
-     *
-     **/
+     * Take $out and send t to the browser in the desired format
+     * @param  array   $out        The data to output to the browser
+     * @param  string  $format     The format the data should be sent as
+     * @param  boolean $sendHeader Whether or not to send the status header
+     * @return void
+     */
     protected function _out($out = array(), $format = 'JSON', $sendHeader = true)
     {
         //  Set cache headers
@@ -59,22 +53,27 @@ class NAILS_API_Controller extends NAILS_Controller
             switch ($out['status']) {
 
                 case 400:
+
                     $headerString = '400 Bad Request';
                     break;
 
                 case 401:
+
                     $headerString = '401 Unauthorized';
                     break;
 
                 case 404:
+
                     $headerString = '404 Not Found';
                     break;
 
                 case 500:
+
                     $headerString = '500 Internal Server Error';
                     break;
 
                 default:
+
                     $headerString = '200 OK';
                     break;
 
@@ -82,12 +81,12 @@ class NAILS_API_Controller extends NAILS_Controller
 
         } elseif(is_array($out)) {
 
-            $out['status']  = 200;
-            $headerString   = '200 OK';
+            $out['status'] = 200;
+            $headerString  = '200 OK';
 
         } else {
 
-            $headerString   = '200 OK';
+            $headerString = '200 OK';
         }
 
         // --------------------------------------------------------------------------
@@ -96,19 +95,17 @@ class NAILS_API_Controller extends NAILS_Controller
         if ($sendHeader) {
 
             $this->output->set_header($serverProtocol . ' ' . $headerString);
-
         }
 
         // --------------------------------------------------------------------------
 
         //  Output content
-        switch(strtoupper($format)) {
+        switch (strtoupper($format)) {
 
             case 'JSON':
 
                 $this->output->set_content_type('application/json');
                 $out = json_encode($out);
-
                 break;
 
             case 'TXT':
@@ -120,7 +117,6 @@ class NAILS_API_Controller extends NAILS_Controller
                 if (!is_string($out)) {
 
                     $out = serialize($out);
-
                 }
                 break;
         }
@@ -128,18 +124,13 @@ class NAILS_API_Controller extends NAILS_Controller
         $this->output->set_output($out);
     }
 
-
     // --------------------------------------------------------------------------
 
-
     /**
-     *  Take the input and spit it out as JSON
-     *
-     *  @access public
-     *  @param  none
-     *  @return void
-     *
-     **/
+     * Map requests to the appropriate method
+     * @param  string $method the method to map to
+     * @return void
+     */
     public function _remap($method)
     {
         if (method_exists($this, $method)) {
@@ -148,28 +139,23 @@ class NAILS_API_Controller extends NAILS_Controller
 
         } else {
 
-            $this->_method_not_found($method);
+            $this->methodNotFound($method);
 
         }
     }
 
-
     // --------------------------------------------------------------------------
 
-
     /**
-     *  Output JSON for when a method is not found (or enabled)
-     *
-     *  @access public
-     *  @param  none
-     *  @return void
-     *
-     **/
-    protected function _method_not_found($method)
+     * Outputs a JSON response if the method isn't found and halts execution
+     * @param  string $method the method which was not found
+     * @return void
+     */
+    protected function methodNotFound($method)
     {
          $this->_out(array(
             'status' => 400,
-            'error' => lang('not_valid_method', $method)
+            'error'  => lang('not_valid_method', $method)
         ));
 
          // Careful now, this might break in future updates of CI

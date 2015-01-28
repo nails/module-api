@@ -14,411 +14,409 @@ require_once '_api.php';
  */
 class NAILS_Cms extends NAILS_API_Controller
 {
-	private $_authorised;
-	private $_error;
+    private $_authorised;
+    private $_error;
 
+    // --------------------------------------------------------------------------
 
-	// --------------------------------------------------------------------------
+    /**
+     * Construct the controller
+     */
+    public function __construct()
+    {
+        parent::__construct();
 
+        // --------------------------------------------------------------------------
 
-	/**
-	 * Constructor
-	 *
-	 * @access	public
-	 * @return	void
-	 *
-	 **/
-	public function __construct()
-	{
-		parent::__construct();
+        $this->_authorised  = true;
+        $this->_error       = '';
 
-		// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		$this->_authorised	= TRUE;
-		$this->_error		= '';
+        if (!isModuleEnabled('cms')) {
 
-		// --------------------------------------------------------------------------
+            //  Cancel execution, module isn't enabled
+            show_404();
+        }
 
-		if ( ! isModuleEnabled( 'cms' ) ) :
+        // --------------------------------------------------------------------------
 
-			//	Cancel execution, module isn't enabled
-			show_404();
+        //  Only logged in users
+        if (!$this->user_model->is_logged_in()) {
 
-		endif;
+            $this->_authorised = false;
+            $this->_error      = lang('auth_require_session');
+        }
 
-		// --------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		//	Only logged in users
-		if ( ! $this->user_model->is_logged_in() ) :
+        //  Only admins
+        if (!$this->user_model->is_admin()) {
 
+            $this->_authorised  = false;
+            $this->_error       = lang('auth_require_admin');
+        }
+    }
 
-			$this->_authorised	= FALSE;
-			$this->_error		= lang( 'auth_require_session' );
+    // --------------------------------------------------------------------------
 
-		endif;
+    /**
+     * Route requests to the pages endpoints
+     * @return void
+     */
+    public function pages()
+    {
+        if (!$this->_authorised) {
 
-		// --------------------------------------------------------------------------
+            $this->_out(array('status' => 401, 'error' => $this->_error));
+            return;
+        }
 
-		//	Only admins
-		if ( ! $this->user_model->is_admin() ) :
+        // --------------------------------------------------------------------------
 
-			$this->_authorised	= FALSE;
-			$this->_error		= lang( 'auth_require_admin' );
+        $this->load->helper('string');
+        $method = 'pages' . underscore_to_camelcase(strtolower($this->uri->segment(4)));
 
-		endif;
-	}
+        if (method_exists($this, $method)) {
 
+            return $this->$method();
 
-	// --------------------------------------------------------------------------
+        } else {
 
+            $this->methodNotFound($this->uri->segment(4));
+            return false;
+        }
+    }
 
-	public function pages()
-	{
-		if ( ! $this->_authorised ) :
+    // --------------------------------------------------------------------------
 
-			$this->_out( array( 'status' => 401, 'error' => $this->_error ) );
-			return;
+    /**
+     * Routes request to the pages/widget endpoints
+     * @return void
+     */
+    protected function pagesWidget()
+    {
+        $this->load->helper('string');
+        $method = 'pagesWidget' . underscore_to_camelcase(strtolower($this->uri->segment(5)));
 
-		endif;
+        if (method_exists($this, $method)) {
 
-		// --------------------------------------------------------------------------
+            return $this->$method();
 
-		switch( $this->uri->segment( 4 ) ) :
+        } else {
 
-			case 'widget'	: $this->_pages_widget();								break;
-			case 'save'		: $this->_pages_save();									break;
-			default			: $this->_method_not_found( $this->uri->segment( 4 ) );	break;
+            $this->methodNotFound($this->uri->segment(5));
+            return false;
+        }
+    }
 
-		endswitch;
-	}
+    // --------------------------------------------------------------------------
 
+    /**
+     * Get CMS Widget editor HTML
+     * @return void
+     */
+    protected function pagesWidgetGetEditor()
+    {
+        $out             = array();
+        $requestedWidget = $this->input->get_post('widget');
 
-	// --------------------------------------------------------------------------
+        parse_str($this->input->get_post('data'), $widgetData);
 
+        if ($requestedWidget) {
 
-	protected function _pages_widget()
-	{
-		switch( $this->uri->segment( 5 ) ) :
+            $this->load->model('cms/cms_page_model');
 
-			case 'get_editor'	: $this->_pages_widget_get_editor();					break;
-			default				: $this->_method_not_found( $this->uri->segment( 5 ) );	break;
+            $requestedWidget = $this->cms_page_model->get_widget($requestedWidget);
 
-		endswitch;
-	}
+            if ($requestedWidget) {
 
+                //  Instantiate the widget
+                include_once $requestedWidget->path . 'widget.php';
 
-	// --------------------------------------------------------------------------
+                try {
 
+                    $WIDGET       = new $requestedWidget->iam();
+                    $widgetEditor = $WIDGET->get_editor($widgetData);
 
-	protected function _pages_widget_get_editor()
-	{
-		$_out		= array();
-		$_widget	= $this->input->get_post( 'widget' );
-		parse_str( $this->input->get_post( 'data' ), $_data );
-		$_template	= $this->input->get_post( 'template' );
+                    if (!empty($widgetEditor)) {
 
-		if ( $_widget ) :
+                        $out['HTML'] = $widgetEditor;
 
-			$this->load->model( 'cms/cms_page_model' );
+                    } else {
 
-			$_widget = $this->cms_page_model->get_widget( $_widget );
+                        $out['HTML'] = '<p class="static">This widget has no configurable options.</p>';
+                    }
 
-			if ( $_widget ) :
+                } catch (Exception $e) {
 
-				//	Instantiate the widget
-				include_once $_widget->path . 'widget.php';
+                    $out['status'] = 500;
+                    $out['error']  = 'This widget has not been configured correctly. Please contact the developer ';
+                    $out['error'] .= 'quoting this error message: ';
+                    $out['error'] .= '<strong>"#3:' . $requestedWidget->iam . ':GetEditor"</strong>';
+                }
 
-				try
-				{
+            } else {
 
-					$WIDGET		= new $_widget->iam();
-					$_editor	= $WIDGET->get_editor( $_data );
+                $out['status'] = 400;
+                $out['error']  = 'Invalid Widget - Error number 2';
+            }
 
-					if ( ! empty( $_editor ) ) :
+        } else {
 
-						$_out['HTML'] = $_editor;
+            $out['status'] = 400;
+            $out['error']  = 'Widget slug must be specified - Error number 1';
+        }
 
-					else :
+        $this->_out($out);
+    }
 
-						$_out['HTML'] = '<p class="static">This widget has no configurable options.</p>';
+    // --------------------------------------------------------------------------
 
-					endif;
+    /**
+     * Save a CMS Page
+     * @return void
+     */
+    protected function pagesSave()
+    {
+        $pageDataRaw     = $this->input->get_post('page_data');
+        $publishAction   = $this->input->get_post('publish_action');
+        $generatePreview = $this->input->get_post('generate_preview');
 
-				}
-				catch ( Exception $e)
-				{
-					$_out['status']	= 500;
-					$_out['error']	= 'This widget has not been configured correctly. Please contact the developer quoting this error message: <strong>"#3:' . $_widget->iam . ':GetEditor"</strong>';
-				}
+        if (!$pageDataRaw) {
 
-			else :
+            $this->_out(array(
+                'status' => 400,
+                'error'  => '"page_data" is a required parameter.'
+           ));
+            return;
+        }
 
-				$_out['status']	= 400;
-				$_out['error']	= 'Invalid Widget - Error number 2';
+        // --------------------------------------------------------------------------
 
-			endif;
+        //  Decode and check
+        $pageData = json_decode($pageDataRaw);
 
-		else :
+        if (is_null($pageData)) {
 
-			$_out['status']	= 400;
-			$_out['error']	= 'Widget slug must be specified - Error number 1';
+            $this->_out(array(
+                'status' => 400,
+                'error'  => '"page_data" is a required parameter.'
+            ));
+            log_message('error', 'API: cms/pages/save - Error decoding JSON: ' . $pageDataRaw);
+            return;
+        }
 
-		endif;
+        if (empty($pageData->hash)) {
 
-		$this->_out( $_out );
-	}
+            $this->_out(array(
+                'status' => 400,
+                'error'  => '"hash" is a required parameter.'
+           ));
+            log_message('error', 'API: cms/pages/save - Empty hash supplied.');
+            return;
+        }
 
+        //  A template must be defined
+        if (empty($pageData->data->template)) {
 
-	// --------------------------------------------------------------------------
+            $this->_out(array(
+                'status' => 400,
+                'error'  => '"data.template" is a required parameter.'
+           ));
+            return;
+        }
 
+        // --------------------------------------------------------------------------
 
-	protected function _pages_save()
-	{
-		$_page_data_raw		= $this->input->get_post( 'page_data' );
-		$_publish_action	= $this->input->get_post( 'publish_action' );
-		$_generate_preview	= $this->input->get_post( 'generate_preview' );
+        /**
+         * Validate data
+         * JSON.stringify doesn't seem to escape forward slashes like PHP does. Check
+         * both in case this is a cross browser issue.
+         */
 
-		if ( ! $_page_data_raw ) :
+        $hash                   = $pageData->hash;
+        $checkObj               = new stdClass();
+        $checkObj->data         = $pageData->data;
+        $checkObj->widget_areas = $pageData->widget_areas;
+        $checkHash1             = md5(json_encode($checkObj, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
 
-			$this->_out(array(
-				'status'	=> 400,
-				'error'		=> '"page_data" is a required parameter.'
-			));
-			return;
+        if ($hash !== $checkHash1) {
 
-		endif;
+            $checkHash2 = md5(json_encode($checkObj));
 
-		// --------------------------------------------------------------------------
+            if ($hash !== $checkHash2) {
 
-		//	Decode and check
-		$_page_data = json_decode( $_page_data_raw );
+                $this->_out(array(
+                    'status' => 400,
+                    'error'  => 'Data failed hash validation. Data might have been modified in transit.'
+                ));
+                log_message('error', 'API: cms/pages/save - Failed to verify hashes. Posted JSON{ ' .  $pageDataRaw );
+                return;
+            }
+        }
 
-		if ( NULL === $_page_data ) :
+        $pageData->hash = $hash;
 
-			$this->_out(array(
-				'status'	=> 400,
-				'error'		=> '"page_data" is a required parameter.'
-			));
-			log_message( 'error', 'API: cms/pages/save - Error decoding JSON: ' . $_page_data_raw );
-			return;
+        // --------------------------------------------------------------------------
 
-		endif;
+        /**
+         * All seems good, let's process this mofo'ing data. Same format as supplied,
+         * just manually specifying things for supreme consistency. Multi-pass?
+         */
 
-		if ( empty( $_page_data->hash ) ) :
+        $data                          = new stdClass();
+        $data->hash                    = $pageData->hash;
+        $data->id                      = !empty($pageData->id) ? (int) $pageData->id : null;
+        $data->data                    = new stdClass();
+        $data->data->title             = !empty($pageData->data->title) ? $pageData->data->title : '';
+        $data->data->parent_id         = !empty($pageData->data->parent_id) ? (int) $pageData->data->parent_id : '';
+        $data->data->seo_title         = !empty($pageData->data->seo_title) ? $pageData->data->seo_title : '';
+        $data->data->seo_description   = !empty($pageData->data->seo_description) ? $pageData->data->seo_description : '';
+        $data->data->seo_keywords      = !empty($pageData->data->seo_keywords) ? $pageData->data->seo_keywords : '';
+        $data->data->template          = $pageData->data->template;
+        $data->data->additional_fields = !empty($pageData->data->additional_fields) ? $pageData->data->additional_fields : '';
+        $data->widget_areas            = !empty($pageData->widget_areas) ? $pageData->widget_areas : new stdClass;
 
-			$this->_out(array(
-				'status'	=> 400,
-				'error'		=> '"hash" is a required parameter.'
-			));
-			log_message( 'error', 'API: cms/pages/save - Empty hash supplied.' );
-			return;
+        if ($data->data->additional_fields) {
 
-		endif;
+            parse_str($data->data->additional_fields, $_additional_fields);
 
-		//	A template must be defined
-		if ( empty( $_page_data->data->template ) ) :
+            if (!empty($_additional_fields['additional_field'])) {
 
-			$this->_out(array(
-				'status'	=> 400,
-				'error'		=> '"data.template" is a required parameter.'
-			));
-			return;
+                $data->data->additional_fields = $_additional_fields['additional_field'];
 
-		endif;
+            } else {
 
-		// --------------------------------------------------------------------------
+                $data->data->additional_fields = array();
+            }
 
-		//	Validate data
-		//	JSON.stringify doesn't seem to escape forward slashes like PHP does
-		//	Check both in case this is a cross browser issue.
+            /**
+             * We're going to encode then decode the additional fields, so they're
+             * consistent with the save objects
+             */
 
-		$_hash						= $_page_data->hash;
-		$_check_obj					= new stdClass();
-		$_check_obj->data			= $_page_data->data;
-		$_check_obj->widget_areas	= $_page_data->widget_areas;
-		$_check_hash1				= md5( json_encode( $_check_obj, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE ) );
+            $data->data->additional_fields = json_decode(json_encode($data->data->additional_fields));
+        }
 
-		if ( $_hash !== $_check_hash1 ) :
+        // --------------------------------------------------------------------------
 
-			$_check_hash2 = md5( json_encode( $_check_obj ) );
+        /**
+         * Data is set, determine whether we're previewing, saving or creating
+         * If an ID is missing then we're creating a new page otherwise we're updating.
+         */
 
-			if ( $_hash !== $_check_hash2 ) :
+        $this->load->model('cms/cms_page_model');
 
-				$this->_out(array(
-					'status'	=> 400,
-					'error'		=> 'Data failed hash validation. Data might have been modified in transit.'
-				));
-				log_message( 'error', 'API: cms/pages/save - Failed to verify hashes. Posted JSON: ' . 	$_page_data_raw  );
-				return;
+        if (!empty($generatePreview)) {
 
-			endif;
+            if (!user_has_permission('admin.cms:0.can_preview_page')) {
 
-		endif;
+                $this->_out(array(
+                    'status' => 400,
+                    'error'  => 'You do not have permission to preview CMS Pages.'
+               ));
+                return;
+            }
 
-		$_page_data->hash = $_hash;
+            $id = $this->cms_page_model->create_preview($data);
 
-		// --------------------------------------------------------------------------
+            if (!$id) {
 
-		//	All seems good, let's process this mofo'ing data. Same format as supplied,
-		//	just manually specifying things for supreme consistency. Multi-pass?
+                $this->_out(array(
+                    'status' => 500,
+                    'error'  => 'There was a problem creating the page preview. ' . $this->cms_page_model->last_error()
+               ));
+                return;
+            }
 
-		$_data							= new stdClass();
-		$_data->hash					= $_page_data->hash;
-		$_data->id						= ! empty( $_page_data->id )						? (int) $_page_data->id					: NULL;
-		$_data->data					= new stdClass();
-		$_data->data->title				= ! empty( $_page_data->data->title )				? $_page_data->data->title				: '';
-		$_data->data->parent_id			= ! empty( $_page_data->data->parent_id )			? (int) $_page_data->data->parent_id	: '';
-		$_data->data->seo_title			= ! empty( $_page_data->data->seo_title )			? $_page_data->data->seo_title			: '';
-		$_data->data->seo_description	= ! empty( $_page_data->data->seo_description )		? $_page_data->data->seo_description	: '';
-		$_data->data->seo_keywords		= ! empty( $_page_data->data->seo_keywords )		? $_page_data->data->seo_keywords		: '';
-		$_data->data->template			= $_page_data->data->template;
-		$_data->data->additional_fields	= ! empty( $_page_data->data->additional_fields )	? $_page_data->data->additional_fields	: '';
-		$_data->widget_areas			= ! empty( $_page_data->widget_areas )				? $_page_data->widget_areas				: new stdClass;
+            $out       = array();
+            $out['id'] = $id;
 
-		if ( $_data->data->additional_fields ) :
+        } else {
 
-			parse_str( $_data->data->additional_fields, $_additional_fields );
-			$_data->data->additional_fields = ! empty( $_additional_fields['additional_field'] ) ? $_additional_fields['additional_field'] : array();
+            if (!$data->id) {
 
-			//	We're going to encode then decode the additional fields, so they're consistent with the save objects
-			$_data->data->additional_fields = json_decode( json_encode( $_data->data->additional_fields ) );
+                if (!user_has_permission('admin.cms:0.can_create_page')) {
 
-		endif;
+                    $this->_out(array(
+                        'status' => 400,
+                        'error'  => 'You do not have permission to create CMS Pages.'
+                   ));
+                    return;
+                }
 
-		// --------------------------------------------------------------------------
+                $id = $this->cms_page_model->create($data);
 
-		/**
-		 * Data is set, determine whether we're previewing, saving or creating
-		 *
-		 * If an ID is missing then we're creating a new page otherwise we're updating.
-		 *
-		 **/
+                if (!$id) {
 
-		$this->load->model( 'cms/cms_page_model' );
+                    $this->_out(array(
+                        'status' => 500,
+                        'error'  => 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
+                   ));
+                    return;
+                }
 
-		if ( ! empty( $_generate_preview ) ) :
+            } else {
 
-			if ( ! user_has_permission( 'admin.cms:0.can_preview_page' ) ) :
+                if (!user_has_permission('admin.cms:0.can_edit_page')) {
 
-				$this->_out(array(
-					'status'	=> 400,
-					'error'		=> 'You do not have permission to preview CMS Pages.'
-				));
-				return;
+                    $this->_out(array(
+                        'status' => 400,
+                        'error'  => 'You do not have permission to edit CMS Pages.'
+                   ));
+                    return;
 
-			endif;
+                }
 
-			$_id = $this->cms_page_model->create_preview( $_data );
+                if ($this->cms_page_model->update($data->id, $data, $this->data)) {
 
-			if ( ! $_id ) :
+                    $id = $data->id;
 
-				$this->_out(array(
-					'status'	=> 500,
-					'error'		=> 'There was a problem creating the page preview. ' . $this->cms_page_model->last_error()
-				));
-				return;
+                } else {
 
-			endif;
+                    $this->_out(array(
+                        'status' => 500,
+                        'error'  => 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
+                   ));
+                    return;
+                }
+            }
 
-			$_out		= array();
-			$_out['id']	= $_id;
+            // --------------------------------------------------------------------------
 
-		else :
+            /**
+             * Page has been saved! Any further steps?
+             * - If is_published is defined then we need to consider it's published status.
+             * - If is_published is null then we're leaving it as it is.
+             */
 
-			if ( ! $_data->id ) :
+            $out       = array();
+            $out['id'] = $id;
 
-				if ( ! user_has_permission( 'admin.cms:0.can_create_page' ) ) :
+            switch ($publishAction) {
 
-					$this->_out(array(
-						'status'	=> 400,
-						'error'		=> 'You do not have permission to create CMS Pages.'
-					));
-					return;
+                case 'PUBLISH':
 
-				endif;
+                    $this->cms_page_model->publish($id);
+                    break;
 
-				$_id = $this->cms_page_model->create( $_data );
+                case 'NONE':
+                default:
 
-				if ( ! $_id ) :
+                    //  Do nothing, absolutely nothing. Go have a margarita.
+                    break;
+            }
+        }
 
-					$this->_out(array(
-						'status'	=> 500,
-						'error'		=> 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
-					));
-					return;
+        // --------------------------------------------------------------------------
 
-				endif;
-
-			else :
-
-				if ( ! user_has_permission( 'admin.cms:0.can_edit_page' ) ) :
-
-					$this->_out(array(
-						'status'	=> 400,
-						'error'		=> 'You do not have permission to edit CMS Pages.'
-					));
-					return;
-
-				endif;
-
-				if ( $this->cms_page_model->update( $_data->id, $_data, $this->data ) ) :
-
-					$_id = $_data->id;
-
-				else :
-
-					$this->_out(array(
-						'status'	=> 500,
-						'error'		=> 'There was a problem saving the page. ' . $this->cms_page_model->last_error()
-					));
-					return;
-
-				endif;
-
-			endif;
-
-			// --------------------------------------------------------------------------
-
-			/**
-			 * Page has been saved! Any further steps?
-			 *
-			 * If is_published is defined then we need to consider it's published status.
-			 * If is_published is NULL then we're leaving it as it is.
-			 *
-			 **/
-
-			$_out		= array();
-			$_out['id']	= $_id;
-
-			switch( $_publish_action ) :
-
-				case 'PUBLISH' :
-
-					$this->cms_page_model->publish( $_id );
-
-				break;
-
-				case 'NONE' :
-				default :
-
-					//	Do nothing, absolutely nothing. Go have a margarita.
-
-				break;
-
-			endswitch;
-
-		endif;
-
-		// --------------------------------------------------------------------------
-
-		//	Return
-		$this->_out( $_out );
-	}
+        //  Return
+        $this->_out($out);
+    }
 }
 
-
 // --------------------------------------------------------------------------
-
 
 /**
  * OVERLOADING NAILS' API MODULES
@@ -444,10 +442,9 @@ class NAILS_Cms extends NAILS_API_Controller
  *
  **/
 
-if ( ! defined( 'NAILS_ALLOW_EXTENSION_CMS' ) ) :
+if (!defined('NAILS_ALLOW_EXTENSION_CMS')) {
 
-	class Cms extends NAILS_Cms
-	{
-	}
-
-endif;
+    class Cms extends NAILS_Cms
+    {
+    }
+}

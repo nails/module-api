@@ -12,6 +12,7 @@ require_once '_api.php';
  * @author      Nails Dev Team
  * @link
  */
+
 class NAILS_Admin extends NAILS_API_Controller
 {
     private $_authorised;
@@ -87,7 +88,7 @@ class NAILS_Admin extends NAILS_API_Controller
 
         } else {
 
-            $this->_method_not_found('nav/' . $method);
+            $this->methodNotFound('nav/' . $method);
         }
     }
 
@@ -156,7 +157,7 @@ class NAILS_Admin extends NAILS_API_Controller
 
         } else {
 
-            $this->_method_not_found('users/' . $method);
+            $this->methodNotFound('users/' . $method);
 
         }
     }
@@ -217,7 +218,7 @@ class NAILS_Admin extends NAILS_API_Controller
 
         } else {
 
-            $this->_method_not_found('users/' . $method);
+            $this->methodNotFound('users/' . $method);
 
         }
     }
