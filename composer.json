@@ -36,6 +36,7 @@
     {
         "nails" :
         {
+            "moduleName": "api",
             "type": "module"
         }
     }
