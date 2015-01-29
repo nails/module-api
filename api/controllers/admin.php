@@ -80,15 +80,16 @@ class NAILS_Admin extends NAILS_API_Controller
 
         // --------------------------------------------------------------------------
 
-        $method = $this->uri->segment(4);
+        $methodRaw = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
+        $method    = 'nav' . underscore_to_camelcase($methodRaw, false);
 
-        if (method_exists($this, '_nav_' . $method)) {
+        if (method_exists($this, $method)) {
 
-            $this->{'_nav_' . $method}();
+            $this->{$method}();
 
         } else {
 
-            $this->methodNotFound('nav/' . $method);
+            $this->methodNotFound('nav/' . $methodRaw);
         }
     }
 
@@ -98,20 +99,19 @@ class NAILS_Admin extends NAILS_API_Controller
      * Saves the user's admin nav preferences
      * @return void
      */
-    protected function _nav_save()
+    protected function navSave()
     {
         $prefRaw = $this->input->get_post('preferences');
-        $pref     = new stdClass();
+        $pref    = new stdClass();
 
-        foreach ($prefRaw as $module => $options) :
+        foreach ($prefRaw as $module => $options) {
 
             $pref->{$module}       = new stdClass();
             $pref->{$module}->open = stringToBoolean($options['open']);
-
-        endforeach;
+        }
 
         $this->load->model('admin/admin_model');
-        $this->admin_model->set_admin_data('nav', $pref);
+        $this->admin_model->setAdminData('nav', $pref);
 
         $this->_out();
     }
@@ -122,10 +122,10 @@ class NAILS_Admin extends NAILS_API_Controller
      * Resets a user's admin nav preferences
      * @return void
      */
-    protected function _nav_reset()
+    protected function navReset()
     {
         $this->load->model('admin/admin_model');
-        $this->admin_model->unset_admin_data('nav');
+        $this->admin_model->unsetAdminData('nav');
 
         $this->_out();
     }
@@ -149,15 +149,16 @@ class NAILS_Admin extends NAILS_API_Controller
 
         // --------------------------------------------------------------------------
 
-        $method = $this->uri->segment(4);
+        $methodRaw = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
+        $method    = 'users' . underscore_to_camelcase($methodRaw, false);
 
-        if (method_exists($this, '_users_' . $_method)) {
+        if (method_exists($this, $method)) {
 
-            $this->{'_users_' . $method}();
+            $this->{$method}();
 
         } else {
 
-            $this->methodNotFound('users/' . $method);
+            $this->methodNotFound('users/' . $methodRaw);
 
         }
     }
@@ -168,7 +169,7 @@ class NAILS_Admin extends NAILS_API_Controller
      * Searches users
      * @return void
      */
-    protected function _users_search()
+    protected function usersSearch()
     {
         $avatarSize = $this->input->get('avatarSize') ? $this->input->get('avatarSize') : 50;
         $term       = $this->input->get('term');
@@ -210,22 +211,23 @@ class NAILS_Admin extends NAILS_API_Controller
 
         // --------------------------------------------------------------------------
 
-        $method = $this->uri->segment(4);
+        $methodRaw = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
+        $method    = 'shop' . underscore_to_camelcase($methodRaw, false);
 
-        if (method_exists($this, '_shop_' . $method)) {
+        if (method_exists($this, $method)) {
 
-            $this->{'_shop_' . $method}();
+            $this->{$method}();
 
         } else {
 
-            $this->methodNotFound('users/' . $method);
+            $this->methodNotFound('users/' . $methodRaw);
 
         }
     }
 
     // --------------------------------------------------------------------------
 
-    protected function _shop_voucher_generate_code()
+    protected function shopVoucherGenerateCode()
     {
         $out = array();
 
