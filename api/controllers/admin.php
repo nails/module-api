@@ -172,9 +172,13 @@ class NAILS_Admin extends NAILS_API_Controller
     protected function usersSearch()
     {
         $avatarSize = $this->input->get('avatarSize') ? $this->input->get('avatarSize') : 50;
-        $term       = $this->input->get('term');
-        $users      = $this->user_model->get_all(null, null, null, null, $term);
-        $out        = array('users' => array());
+
+        $data = array(
+            'keywords' => $this->input->get('term')
+        );
+
+        $users = $this->user_model->get_all(1, 50, $data);
+        $out   = array('users' => array());
 
         foreach ($users as $user) {
 
