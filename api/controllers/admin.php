@@ -69,28 +69,7 @@ class NAILS_Admin extends NAILS_API_Controller
      */
     public function nav()
     {
-        if (!$this->_authorised) {
-
-            $_out           = array();
-            $_out['status'] = 401;
-            $_out['error']  = $this->_error;
-            $this->_out($_out);
-            return;
-        }
-
-        // --------------------------------------------------------------------------
-
-        $methodRaw = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
-        $method    = 'nav' . underscore_to_camelcase($methodRaw, false);
-
-        if (method_exists($this, $method)) {
-
-            $this->{$method}();
-
-        } else {
-
-            $this->methodNotFound('nav/' . $methodRaw);
-        }
+        $this->routeRequest('nav');
     }
 
     // --------------------------------------------------------------------------
@@ -138,29 +117,7 @@ class NAILS_Admin extends NAILS_API_Controller
      */
     public function users()
     {
-        if (!$this->_authorised) {
-
-            $_out           = array();
-            $_out['status'] = 401;
-            $_out['error']  = $this->_error;
-            $this->_out($_out);
-            return;
-        }
-
-        // --------------------------------------------------------------------------
-
-        $methodRaw = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
-        $method    = 'users' . underscore_to_camelcase($methodRaw, false);
-
-        if (method_exists($this, $method)) {
-
-            $this->{$method}();
-
-        } else {
-
-            $this->methodNotFound('users/' . $methodRaw);
-
-        }
+        $this->routeRequest('users');
     }
 
     // --------------------------------------------------------------------------
@@ -204,29 +161,7 @@ class NAILS_Admin extends NAILS_API_Controller
      */
     public function shop()
     {
-        if (!$this->_authorised) {
-
-            $_out           = array();
-            $_out['status'] = 401;
-            $_out['error']  = $this->_error;
-            $this->_out($_out);
-            return;
-        }
-
-        // --------------------------------------------------------------------------
-
-        $methodRaw = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
-        $method    = 'shop' . underscore_to_camelcase($methodRaw, false);
-
-        if (method_exists($this, $method)) {
-
-            $this->{$method}();
-
-        } else {
-
-            $this->methodNotFound('users/' . $methodRaw);
-
-        }
+        $this->routeRequest('logs');
     }
 
     // --------------------------------------------------------------------------
@@ -239,6 +174,66 @@ class NAILS_Admin extends NAILS_API_Controller
 
         $out['code'] = $this->shop_voucher_model->generateValidCode();
         $this->_out($out);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Routes requests to logs/*
+     * @return void
+     */
+    public function logs()
+    {
+        $this->routeRequest('logs');
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function logsSite()
+    {
+        $this->load->model('admin/admin_sitelog_model');
+        $out = array();
+
+        // --------------------------------------------------------------------------
+
+        $out['logs'] = $this->admin_sitelog_model->getAll();
+
+        // --------------------------------------------------------------------------
+
+        $this->_out($out);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Routes requests
+     * @param  string $prefix The method prefix
+     * @return void
+     */
+    protected function routeRequest($prefix)
+    {
+        if (!$this->_authorised) {
+
+            $_out           = array();
+            $_out['status'] = 401;
+            $_out['error']  = $this->_error;
+            $this->_out($_out);
+            return;
+        }
+
+        // --------------------------------------------------------------------------
+
+        $methodRaw = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
+        $method    = $prefix . underscore_to_camelcase($methodRaw, false);
+
+        if (method_exists($this, $method)) {
+
+            $this->{$method}();
+
+        } else {
+
+            $this->methodNotFound($prefix . '/' . $methodRaw);
+        }
     }
 }
 
