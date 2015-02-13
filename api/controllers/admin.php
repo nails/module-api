@@ -161,7 +161,7 @@ class NAILS_Admin extends NAILS_API_Controller
      */
     public function shop()
     {
-        $this->routeRequest('logs');
+        $this->routeRequest('shop');
     }
 
     // --------------------------------------------------------------------------
