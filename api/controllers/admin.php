@@ -39,7 +39,7 @@ class NAILS_Admin extends NAILS_API_Controller
         //  IP whitelist?
         $whitelistIp = (array) app_setting('whitelist', 'admin');
 
-        if ($whitelistIp) {
+        if (!empty($whitelistIp)) {
 
             if (!isIpInRange($this->input->ip_address(), $whitelistIp)) {
 

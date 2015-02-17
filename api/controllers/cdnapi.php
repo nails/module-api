@@ -291,7 +291,6 @@ class NAILS_Cdnapi extends NAILS_API_Controller
     {
         $objectId = $this->input->get('object_id');
         $tagId    = $this->input->get('tag_id');
-        $out      = array();
 
         $added = $this->cdn->object_tag_add($objectId, $tagId);
 
@@ -323,7 +322,6 @@ class NAILS_Cdnapi extends NAILS_API_Controller
     {
         $objectId = $this->input->get('object_id');
         $tagId    = $this->input->get('tag_id');
-        $out      = array();
 
         $deleted = $this->cdn->object_tag_delete($objectId, $tagId);
 

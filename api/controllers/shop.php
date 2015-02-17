@@ -19,12 +19,8 @@ use Omnipay\Omnipay;
 class NAILS_Shop extends NAILS_API_Controller
 {
     /**
-     * Constructor
-     *
-     * @access  public
-     * @return  void
-     *
-     **/
+     * Construct the controller
+     */
     public function __construct()
     {
         parent::__construct();
@@ -420,7 +416,7 @@ class NAILS_Shop extends NAILS_API_Controller
  * before including this PHP file and extend as normal (i.e in the same way as below);
  * the helper won't be declared so we can declare our own one, app specific.
  *
- **/
+ */
 
 if (!defined('NAILS_ALLOW_EXTENSION_SHOP')) {
 

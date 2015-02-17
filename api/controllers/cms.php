@@ -335,7 +335,7 @@ class NAILS_Cms extends NAILS_API_Controller
 
         } else {
 
-            if (!$data->id) {
+            if (empty($data->id)) {
 
                 if (!userHasPermission('admin.cms:0.can_create_page')) {
 
