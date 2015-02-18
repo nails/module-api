@@ -54,9 +54,9 @@ class NAILS_Cdnapi extends NAILS_API_Controller
 
         // --------------------------------------------------------------------------
 
-        if ($this->user_model->is_logged_in()) {
+        if ($this->user_model->isLoggedIn()) {
 
-            $out['token'] = $this->cdn->generate_api_upload_token(active_user('id'));
+            $out['token'] = $this->cdn->generate_api_upload_token(activeUser('id'));
 
         } else {
 
@@ -82,7 +82,7 @@ class NAILS_Cdnapi extends NAILS_API_Controller
 
         // --------------------------------------------------------------------------
 
-        if (!$this->user_model->is_logged_in()) {
+        if (!$this->user_model->isLoggedIn()) {
 
             //  User is not logged in must supply a valid upload token
             $token = $this->input->get_post('token');
@@ -105,7 +105,7 @@ class NAILS_Cdnapi extends NAILS_API_Controller
 
             } else {
 
-                $this->user_model->set_active_user($user);
+                $this->user_model->setActiveUser($user);
             }
         }
 

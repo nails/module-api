@@ -48,13 +48,13 @@ class NAILS_Admin extends NAILS_API_Controller
         }
 
         //  Only logged in users
-        if (!$this->user_model->is_logged_in()) {
+        if (!$this->user_model->isLoggedIn()) {
 
             $this->_authorised = false;
             $this->_error      = lang('auth_require_session');
 
         //  Only admins
-        } elseif (!$this->user_model->is_admin()) {
+        } elseif (!$this->user_model->isAdmin()) {
 
             $this->_authorised = false;
             $this->_error      = lang('auth_require_admin');

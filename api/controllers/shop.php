@@ -234,10 +234,10 @@ class NAILS_Shop extends NAILS_API_Controller
 
             $this->session->set_userdata('shop_currency', $currency->code);
 
-            if ($this->user_model->is_logged_in()) {
+            if ($this->user_model->isLoggedIn()) {
 
                 //  Save to the user object
-                $this->user_model->update(active_user('id'), array('shop_currency' => $currency->code));
+                $this->user_model->update(activeUser('id'), array('shop_currency' => $currency->code));
             }
 
         } else {
