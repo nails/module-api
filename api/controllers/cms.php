@@ -310,7 +310,7 @@ class NAILS_Cms extends NAILS_API_Controller
 
         if (!empty($generatePreview)) {
 
-            if (!userHasPermission('admin.cms:0.can_preview_page')) {
+            if (!userHasPermission('admin:cms:page:preview')) {
 
                 $this->_out(array(
                     'status' => 400,
@@ -337,7 +337,7 @@ class NAILS_Cms extends NAILS_API_Controller
 
             if (empty($data->id)) {
 
-                if (!userHasPermission('admin.cms:0.can_create_page')) {
+                if (!userHasPermission('admin:cms:page:create')) {
 
                     $this->_out(array(
                         'status' => 400,
@@ -359,7 +359,7 @@ class NAILS_Cms extends NAILS_API_Controller
 
             } else {
 
-                if (!userHasPermission('admin.cms:0.can_edit_page')) {
+                if (!userHasPermission('admin:cms:page:edit')) {
 
                     $this->_out(array(
                         'status' => 400,
