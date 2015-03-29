@@ -110,9 +110,9 @@ class ApiRouter extends Nails_Controller
         //  Handle OPTIONS CORS preflight requests
         if ($this->requestMethod === 'OPTIONS') {
 
-            header( 'Access-Control-Allow-Origin: *' );
-            header( 'Access-Control-Allow-Headers: X-token, X-udid, content, origin, content-type' );
-            header( 'Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS' );
+            header('Access-Control-Allow-Origin: *');
+            header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
+            header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
             exit;
         }
 
@@ -274,6 +274,11 @@ class ApiRouter extends Nails_Controller
         $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate');
         $this->output->set_header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
         $this->output->set_header('Pragma: no-cache');
+
+        //  Set access control headers
+        $this->output->set_header('Access-Control-Allow-Origin: *');
+        $this->output->set_header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
+        $this->output->set_header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
 
         $serverProtocol = $this->input->server('SERVER_PROTOCOL');
 
