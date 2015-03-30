@@ -185,7 +185,7 @@ class ApiRouter extends Nails_Controller
                 //  Load the file and try and execute the method
                 require_once $controllerPath;
 
-                $moduleName = 'App\\Api\\' . ucfirst($this->moduleName) . '\\' . ucfirst($this->className);
+                $moduleName = 'Nails\\Api\\' . ucfirst($this->moduleName) . '\\' . ucfirst($this->className);
 
                 if (class_exists($moduleName)) {
 
@@ -193,8 +193,24 @@ class ApiRouter extends Nails_Controller
 
                         $output['status'] = 401;
                         $output['error']  = 'You must be logged in.';
+                    }
 
-                    } else {
+                    /**
+                     * If no errors and a scope is required, check the scope
+                     */
+                    if (empty($output) && !empty($moduleName::$requiresScope)) {
+
+                        if (empty($accessToken->scope) || !in_array($moduleName::$requiresScope, $accessToken->scope)) {
+
+                            $output['status'] = 401;
+                            $output['error']  = '"' . $moduleName::$requiresScope . '" scope is required.';
+                        }
+                    }
+
+                    /**
+                     * If no errors so far, begin execution
+                     */
+                    if (empty($output)) {
 
                         //  Save a reference to $this, so that API controllers can interact with the router
                         $this->data['apiRouter'] = $this;
