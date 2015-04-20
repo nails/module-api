@@ -33,8 +33,11 @@ class ApiRouter extends Nails_Controller
         // --------------------------------------------------------------------------
 
         //  Set defaults
-        $this->outputValidFormats = array('JSON');
-        $this->outputSendHeader   = true;
+        $this->outputValidFormats = array(
+            'TXT',
+            'JSON'
+        );
+        $this->outputSendHeader = true;
 
         // --------------------------------------------------------------------------
 
@@ -42,61 +45,41 @@ class ApiRouter extends Nails_Controller
         $this->requestMethod = $this->input->server('REQUEST_METHOD');
         $this->requestMethod = $this->requestMethod ? $this->requestMethod : 'GET';
 
-        //  Work out the moduleName and method
-        $this->moduleName = $this->uri->segment(2);
-        $this->className  = $this->uri->segment(3);
-        $this->method     = $this->uri->segment(4) ? $this->uri->segment(4) : 'index';
+        /**
+         * In order to work out the next few parts we'll analyse the URI string manually.
+         * We're doing this ebcause of the optional return type at the end of the string;
+         * it's easier to regex that quickly,r emove it, then split up the segments.
+         */
 
-        //  Work out the format requested
-        $formatPattern = '/\.([a-zA-Z]+)$/';
-        preg_match($formatPattern, uri_string(), $matches);
+        $uriString = uri_string();
+
+        //  Get the format, if any
+        $formatPattern = '/\.([a-z]*)$/';
+        preg_match($formatPattern, $uriString, $matches);
 
         if (!empty($matches[1])) {
 
-            $this->outputFormat = $matches[1];
+            $this->outputFormat = strtoupper($matches[1]);
+
+            //  Remove the format from the string
+            $uriString = preg_replace($formatPattern, '', $uriString);
 
         } else {
 
-            $this->outputFormat = 'json';
+            $this->outputFormat = 'JSON';
         }
 
-        //  Remove the format from the other strings, in case it got caught up
-        $this->moduleName = preg_replace($formatPattern, '', $this->moduleName);
-        $this->className  = preg_replace($formatPattern, '', $this->className);
-        $this->method     = preg_replace($formatPattern, '', $this->method);
+        //  Remove the module prefix (i.e "api/") then explode into segments
+        $uriString = substr($uriString, 4);
+        $uriArray  = explode('/', $uriString);
 
-        //  Work out the parameters
-        $pattern  = '#^api';
-        $pattern .= $this->moduleName ? '/' . preg_quote($this->moduleName, '#') : '';
-        $pattern .= $this->className ? '/' . preg_quote($this->className, '#') : '';
-        $pattern .= $this->method ? '/' . preg_quote($this->method, '#') : '';
-        $pattern .= '/(.*)';
-        $pattern .= '(\.' . $this->outputFormat . ')?';
-        $pattern .= '$#';
+        //  Work out the moduleName, className and method
+        $this->moduleName = array_key_exists(0, $uriArray) ? $uriArray[0] : null;
+        $this->className  = array_key_exists(1, $uriArray) ? $uriArray[1] : $this->moduleName;
+        $this->method     = array_key_exists(2, $uriArray) ? $uriArray[2] : 'index';
 
-        if (preg_match($pattern, uri_string())) {
-
-            preg_match_all($pattern, uri_string(), $matches);
-
-            if (!empty($matches[1][0])) {
-
-                $this->params = explode('/', $matches[1][0]);
-
-            } else {
-
-                $this->params = array();
-            }
-
-        } else {
-
-            $this->params = array();
-        }
-
-        //  Remove the format from the params, it might be caught up in there too
-        foreach ($this->params as &$param) {
-
-            $param = preg_replace($formatPattern, '', $param);
-        }
+        //  What's left of the array are the parameters to pass to the method
+        $this->params = array_slice($uriArray, 3);
     }
 
     // --------------------------------------------------------------------------
@@ -114,167 +97,195 @@ class ApiRouter extends Nails_Controller
             header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
             header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
             exit;
-        }
 
-        // --------------------------------------------------------------------------
+        } else {
 
-        /**
-         * If an access token has been passed then verify it
-         *
-         * Passing the token via the header is preferred, but fallback to the GET
-         * and POST arrays.
-         */
+            /**
+             * If an access token has been passed then verify it
+             *
+             * Passing the token via the header is preferred, but fallback to the GET
+             * and POST arrays.
+             */
 
-        $accessToken = $this->input->get_request_header('X-accesstoken');
+            $accessToken = $this->input->get_request_header('X-accesstoken');
 
-        if (!$accessToken) {
+            if (!$accessToken) {
 
-            $accessToken = $this->input->get_post('accessToken');
-        }
-
-        if ($accessToken) {
-
-            $this->load->model('auth/user_access_token_model');
-
-            $accessToken = $this->user_access_token_model->getByValidToken($accessToken);
+                $accessToken = $this->input->get_post('accessToken');
+            }
 
             if ($accessToken) {
 
-                $this->user_model->setLoginData($accessToken->user_id, false);
-            }
-        }
+                $this->load->model('auth/user_access_token_model');
 
-        // --------------------------------------------------------------------------
+                $accessToken = $this->user_access_token_model->getByValidToken($accessToken);
 
-        $output = array();
+                if ($accessToken) {
 
-        if ($this->outputSetFormat($this->outputFormat)) {
-
-            /**
-             * Look for a controller, app version first then the first one we
-             * find in the modules.
-             */
-            $controllerPaths = array(
-                FCPATH . APPPATH . 'modules/api/controllers/'
-            );
-
-            $nailsModules = _NAILS_GET_MODULES();
-
-            foreach ($nailsModules as $module) {
-
-                $controllerPaths[] = $module->path . 'api/controllers/';
-            }
-
-            //  Look for a valid controller
-            $controllerName = ucfirst($this->className) . '.php';
-
-            foreach ($controllerPaths as $path) {
-
-                $fullPath = $path . $controllerName;
-
-                if (is_file($fullPath)) {
-
-                    $controllerPath = $fullPath;
-                    require_once NAILS_PATH . 'module-api/api/controllers/apiController.php';
-                    break;
+                    $this->user_model->setLoginData($accessToken->user_id, false);
                 }
             }
 
-            if (!empty($controllerPath)) {
+            // --------------------------------------------------------------------------
 
-                //  Load the file and try and execute the method
-                require_once $controllerPath;
+            $output = array();
 
-                $moduleName = 'Nails\\Api\\' . ucfirst($this->moduleName) . '\\' . ucfirst($this->className);
+            if ($this->outputSetFormat($this->outputFormat)) {
 
-                if (class_exists($moduleName)) {
+                /**
+                 * Look for a controller, app version first then the first one we
+                 * find in the modules.
+                 */
+                $controllerPaths = array(
+                    FCPATH . APPPATH . 'modules/api/controllers/'
+                );
 
-                    if (!empty($moduleName::$requiresAuthentication) && !$this->user->isLoggedIn()) {
+                $nailsModules = _NAILS_GET_MODULES();
 
-                        $output['status'] = 401;
-                        $output['error']  = 'You must be logged in.';
+                foreach ($nailsModules as $module) {
+
+                    $controllerPaths[] = $module->path . 'api/controllers/';
+                }
+
+                //  Look for a valid controller
+                $controllerName = ucfirst($this->className) . '.php';
+
+                foreach ($controllerPaths as $path) {
+
+                    $fullPath = $path . $controllerName;
+
+                    if (is_file($fullPath)) {
+
+                        $controllerPath = $fullPath;
+                        require_once NAILS_PATH . 'module-api/api/controllers/apiController.php';
+                        break;
                     }
+                }
 
-                    /**
-                     * If no errors and a scope is required, check the scope
-                     */
-                    if (empty($output) && !empty($moduleName::$requiresScope)) {
+                if (!empty($controllerPath)) {
 
-                        if (empty($accessToken->scope) || !in_array($moduleName::$requiresScope, $accessToken->scope)) {
+                    //  Load the file and try and execute the method
+                    require_once $controllerPath;
+
+                    $moduleName = 'Nails\\Api\\' . ucfirst($this->moduleName) . '\\' . ucfirst($this->className);
+
+                    if (class_exists($moduleName)) {
+
+                        if (!empty($moduleName::$requiresAuthentication) && !$this->user->isLoggedIn()) {
 
                             $output['status'] = 401;
-                            $output['error']  = '"' . $moduleName::$requiresScope . '" scope is required.';
+                            $output['error']  = 'You must be logged in.';
                         }
-                    }
-
-                    /**
-                     * If no errors so far, begin execution
-                     */
-                    if (empty($output)) {
-
-                        //  Save a reference to $this, so that API controllers can interact with the router
-                        $this->data['apiRouter'] = $this;
-
-                        //  New instance of the controller
-                        $instance = new $moduleName();
 
                         /**
-                         * We need to look for the appropriate method; we'll look int he following order:
-                         *
-                         * - {requestMethod}Remap()
-                         * - {requestMethod}{method}()
-                         * - anyRemap()
-                         * - any{method}()
+                         * If no errors and a scope is required, check the scope
                          */
+                        if (empty($output) && !empty($moduleName::$requiresScope)) {
 
-                        $methods = array(
-                            strtolower($this->requestMethod) . 'Remap',
-                            strtolower($this->requestMethod) . ucfirst($this->method),
-                            'anyRemap',
-                            'any' . ucfirst($this->method)
-                        );
+                            if (empty($accessToken->scope) || !in_array($moduleName::$requiresScope, $accessToken->scope)) {
 
-                        $didFindRoute = false;
-
-                        foreach ($methods as $methodName) {
-
-                            if (is_callable(array($instance, $methodName))) {
-
-                                $didFindRoute = true;
-                                $output       = call_user_func_array(array($instance, $methodName), $this->params);
-                                break;
-
+                                $output['status'] = 401;
+                                $output['error']  = '"' . $moduleName::$requiresScope . '" scope is required.';
                             }
                         }
 
-                        if (!$didFindRoute) {
+                        /**
+                         * If no errors so far, begin execution
+                         */
+                        if (empty($output)) {
 
-                            $output['status'] = 404;
-                            $output['error']  = '"' . $this->requestMethod . ': ' . $this->moduleName . '/';
-                            $output['error'] .= $this->className . '/' . $this->method . '" is not a valid API route.';
+                            //  Save a reference to $this, so that API controllers can interact with the router
+                            $this->data['apiRouter'] = $this;
+
+                            //  New instance of the controller
+                            $instance = new $moduleName();
+
+                            /**
+                             * We need to look for the appropriate method; we'll look in the following order:
+                             *
+                             * - {requestMethod}Remap()
+                             * - {requestMethod}{method}()
+                             * - anyRemap()
+                             * - any{method}()
+                             *
+                             * The second parameter is whether the method is a remap method or not.
+                             */
+
+                            $methods = array(
+                                array(
+                                    strtolower($this->requestMethod) . 'Remap',
+                                    true
+                                ),
+                                array(
+                                    strtolower($this->requestMethod) . ucfirst($this->method),
+                                    false
+                                ),
+                                array(
+                                    'anyRemap',
+                                    true
+                                ),
+                                array(
+                                    'any' . ucfirst($this->method),
+                                    false
+                                )
+                            );
+
+                            $didFindRoute = false;
+
+                            foreach ($methods as $methodName) {
+
+                                if (is_callable(array($instance, $methodName[0]))) {
+
+                                    /**
+                                     * If the method we're trying to call is a remap method, then the first
+                                     * param should be the name of the method being called
+                                     */
+
+                                    if ($methodName[1]) {
+
+                                        $params = array_merge(array($this->method), $this->params);
+
+                                    } else {
+
+                                        $params = $this->params;
+                                    }
+
+                                    $didFindRoute = true;
+                                    $output       = call_user_func_array(array($instance, $methodName[0]), $params);
+                                    break;
+
+                                }
+                            }
+
+                            if (!$didFindRoute) {
+
+                                $output['status'] = 404;
+                                $output['error']  = '"' . $this->requestMethod . ': ' . $this->moduleName . '/';
+                                $output['error'] .= $this->className . '/' . $this->method . '" is not a valid API route.';
+                            }
                         }
+
+                    } else {
+
+                        $output['status'] = 500;
+                        $output['error']  = '"' . $this->moduleName . '" is incorrectly configured.';
                     }
 
                 } else {
 
-                    $output['status'] = 500;
-                    $output['error']  = '"' . $this->moduleName . '" is incorrectly configured.';
+                    $output['status'] = 404;
+                    $output['error']  = '"' . $this->moduleName . '/' . $this->method . '" is not a valid API route.';
                 }
 
             } else {
 
-                $output['status'] = 404;
-                $output['error']  = '"' . $this->moduleName . '/' . $this->method . '" is not a valid API route.';
+                $output['status']   = 400;
+                $output['error']    = '"' . $this->outputFormat . '" is not a valid format.';
+                $this->outputFormat = 'JSON';
             }
 
-        } else {
-
-            $output['status'] = 400;
-            $output['error']  = '"' . $this->outputFormat . '" is not a valid format.';
-            $this->outputFormat     = 'JSON';
+            $this->output($output);
         }
-
-        $this->output($output);
     }
 
     // --------------------------------------------------------------------------
@@ -352,7 +363,12 @@ class ApiRouter extends Nails_Controller
         // --------------------------------------------------------------------------
 
         //  Output content
-        switch (strtoupper($this->outputFormat)) {
+        switch ($this->outputFormat) {
+
+            case 'TXT':
+
+                $out = $this->outputTxt($out);
+                break;
 
             case 'JSON':
 
@@ -361,6 +377,20 @@ class ApiRouter extends Nails_Controller
         }
 
         $this->output->set_output($out);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Formats $out as a plain text string formatted as JSON (for easy reading)
+     * but a plaintext contentType
+     * @param  array $out The result of the API call
+     * @return string
+     */
+    private function outputTxt($out)
+    {
+        $this->output->set_content_type('text/html');
+        return defined('JSON_PRETTY_PRINT') ? json_encode($out, JSON_PRETTY_PRINT) : json_encode($out);
     }
 
     // --------------------------------------------------------------------------
@@ -387,7 +417,7 @@ class ApiRouter extends Nails_Controller
     {
         if ($this->isValidFormat($format)) {
 
-            $this->outputFormat = $format;
+            $this->outputFormat = strtoupper($format);
             return true;
         }
 
