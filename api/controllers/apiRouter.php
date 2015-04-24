@@ -253,7 +253,6 @@ class ApiRouter extends Nails_Controller
                                     $didFindRoute = true;
                                     $output       = call_user_func_array(array($instance, $methodName[0]), $params);
                                     break;
-
                                 }
                             }
 
