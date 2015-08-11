@@ -182,7 +182,7 @@ class ApiRouter extends Nails_Controller
                          */
                         if (empty($output) && !empty($moduleName::$requiresScope)) {
 
-                            if (empty($accessToken->scope) || !in_array($moduleName::$requiresScope, $accessToken->scope)) {
+                            if (!$this->user_access_token_model->hasScope($accessToken, $moduleName::$requiresScope)) {
 
                                 $output['status'] = 401;
                                 $output['error']  = '"' . $moduleName::$requiresScope . '" scope is required.';
