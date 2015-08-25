@@ -1,12 +1,6 @@
 {
     "name": "nailsapp/module-api",
-    "keywords":
-    [
-        "Nails",
-        "Shed Collective",
-        "CodeIgniter",
-        "API Module"
-    ],
+    "keywords": ["Nails", "Shed Collective", "CodeIgniter", "API Module"],
     "homepage": "http://nailsapp.co.uk/modules/api",
     "description": "This is the \"API\" module for Nails.",
     "license": "MIT",
