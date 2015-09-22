@@ -185,7 +185,8 @@ class ApiRouter extends Nails_Controller
                             if (!$this->user_access_token_model->hasScope($accessToken, $moduleName::$requiresScope)) {
 
                                 $output['status'] = 401;
-                                $output['error']  = 'Access token with "' . $moduleName::$requiresScope . '" scope is required.';
+                                $output['error']  = 'Access token with "' . $moduleName::$requiresScope;
+                                $output['error'] .= '" scope is required.';
                             }
                         }
 
@@ -260,7 +261,8 @@ class ApiRouter extends Nails_Controller
 
                                 $output['status'] = 404;
                                 $output['error']  = '"' . $this->requestMethod . ': ' . $this->moduleName . '/';
-                                $output['error'] .= $this->className . '/' . $this->method . '" is not a valid API route.';
+                                $output['error'] .= $this->className . '/' . $this->method;
+                                $output['error'] .= '" is not a valid API route.';
                             }
                         }
 
@@ -430,8 +432,8 @@ class ApiRouter extends Nails_Controller
      * @param  boolean $sendHeader Whether the ehader should be sent or not
      * @return void
      */
-    public function outputSendHeader($sendHeader) {
-
+    public function outputSendHeader($sendHeader)
+    {
         $this->outputSendHeader = !empty($sendHeader);
     }
 
@@ -442,8 +444,8 @@ class ApiRouter extends Nails_Controller
      * @param string The format to check
      * @return boolean
      */
-    private function isValidFormat($format) {
-
+    private function isValidFormat($format)
+    {
         return in_array(strtoupper($format), $this->outputValidFormats);
     }
 }
