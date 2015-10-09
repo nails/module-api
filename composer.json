@@ -23,8 +23,19 @@
     {
         "email": "hello@shedcollective.org"
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "require":
     {
+        "nailsapp/common": "dev-develop"
+    },
+    "require-dev":
+    {
+        "phpunit/phpunit": "4.*"
+    },
+    "autoload":
+    {
+        "psr-4": {"Nails\\Api\\": "src/"}
     },
     "extra":
     {

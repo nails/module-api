@@ -10,14 +10,16 @@
  * @link
  */
 
-class ApiController extends MX_Controller
+namespace Nails\Api\Controllers;
+
+class Base extends \MX_Controller
 {
     protected $data;
 
     // --------------------------------------------------------------------------
 
     /**
-     * Whether the controlelr requires that the user be authenticated or not
+     * Whether the controller requires that the user be authenticated or not
      * @var boolean
      */
     public static $requiresAuthentication = false;
@@ -42,13 +44,13 @@ class ApiController extends MX_Controller
     /**
      * Common method
      * @param  string $method the method which was not found
-     * @return void
+     * @return array
      */
     protected function methodNotFound($method)
     {
          return array(
             'status' => 404,
             'error'  => '"' . $method . '" is not a valid API route.'
-        );
+         );
     }
 }

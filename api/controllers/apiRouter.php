@@ -156,7 +156,6 @@ class ApiRouter extends Nails_Controller
                     if (is_file($fullPath)) {
 
                         $controllerPath = $fullPath;
-                        require_once NAILS_PATH . 'module-api/api/controllers/apiController.php';
                         break;
                     }
                 }
