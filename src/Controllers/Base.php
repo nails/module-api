@@ -15,6 +15,7 @@ namespace Nails\Api\Controllers;
 class Base extends \MX_Controller
 {
     protected $data;
+    protected $oApiRouter;
 
     // --------------------------------------------------------------------------
 
@@ -29,14 +30,11 @@ class Base extends \MX_Controller
     /**
      * Construct the controller, load all the admin assets, etc
      */
-    public function __construct()
+    public function __construct($oApiRouter)
     {
         parent::__construct();
-
-        // --------------------------------------------------------------------------
-
-        //  Get the controller data
-        $this->data =& getControllerData();
+        $this->data       =& getControllerData();
+        $this->oApiRouter = $oApiRouter;
     }
 
     // --------------------------------------------------------------------------
@@ -48,9 +46,22 @@ class Base extends \MX_Controller
      */
     protected function methodNotFound($method)
     {
+        $this->writeLog('"' . $method . '" is not a valid API route.');
+
          return array(
             'status' => 404,
             'error'  => '"' . $method . '" is not a valid API route.'
          );
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Writes a line to the log
+     * @param string $sLine the line to write
+     */
+    protected function writeLog($sLine)
+    {
+        $this->oApiRouter->writeLog($sLine);
     }
 }

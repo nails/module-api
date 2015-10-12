@@ -12,14 +12,14 @@
 
 class ApiRouter extends Nails_Controller
 {
-    private $requestMethod;
-    private $moduleName;
-    private $className;
-    private $method;
-    private $params;
-    private $outputValidFormats;
-    private $outputFormat;
-    private $outputSendHeader;
+    private $sRequestMethod;
+    private $sModuleName;
+    private $sClassName;
+    private $sMethod;
+    private $aParams;
+    private $aOutputValidFormats;
+    private $sOutputFormat;
+    private $bOutputSendHeader;
 
     // --------------------------------------------------------------------------
 
@@ -33,17 +33,17 @@ class ApiRouter extends Nails_Controller
         // --------------------------------------------------------------------------
 
         //  Set defaults
-        $this->outputValidFormats = array(
+        $this->aOutputValidFormats = array(
             'TXT',
             'JSON'
         );
-        $this->outputSendHeader = true;
+        $this->bOutputSendHeader = true;
 
         // --------------------------------------------------------------------------
 
         //  Work out the request method
-        $this->requestMethod = $this->input->server('REQUEST_METHOD');
-        $this->requestMethod = $this->requestMethod ? $this->requestMethod : 'GET';
+        $this->sRequestMethod = $this->input->server('REQUEST_METHOD');
+        $this->sRequestMethod = $this->sRequestMethod ? $this->sRequestMethod : 'GET';
 
         /**
          * In order to work out the next few parts we'll analyse the URI string manually.
@@ -59,27 +59,32 @@ class ApiRouter extends Nails_Controller
 
         if (!empty($matches[1])) {
 
-            $this->outputFormat = strtoupper($matches[1]);
+            $this->sOutputFormat = strtoupper($matches[1]);
 
             //  Remove the format from the string
             $uriString = preg_replace($formatPattern, '', $uriString);
 
         } else {
 
-            $this->outputFormat = 'JSON';
+            $this->sOutputFormat = 'JSON';
         }
 
         //  Remove the module prefix (i.e "api/") then explode into segments
         $uriString = substr($uriString, 4);
         $uriArray  = explode('/', $uriString);
 
-        //  Work out the moduleName, className and method
-        $this->moduleName = array_key_exists(0, $uriArray) ? $uriArray[0] : null;
-        $this->className  = array_key_exists(1, $uriArray) ? $uriArray[1] : $this->moduleName;
-        $this->method     = array_key_exists(2, $uriArray) ? $uriArray[2] : 'index';
+        //  Work out the sModuleName, sClassName and method
+        $this->sModuleName = array_key_exists(0, $uriArray) ? $uriArray[0] : null;
+        $this->sClassName  = array_key_exists(1, $uriArray) ? $uriArray[1] : $this->sModuleName;
+        $this->sMethod     = array_key_exists(2, $uriArray) ? $uriArray[2] : 'index';
 
         //  What's left of the array are the parameters to pass to the method
-        $this->params = array_slice($uriArray, 3);
+        $this->aParams = array_slice($uriArray, 3);
+
+        //  Configure logging
+        $oDateTime     = \Nails\Factory::factory('DateTime');
+        $this->oLogger = \Nails\Factory::service('Logger');
+        $this->oLogger->setFile('api-' . $oDateTime->format('y-m-d') . '.php');
     }
 
     // --------------------------------------------------------------------------
@@ -91,7 +96,7 @@ class ApiRouter extends Nails_Controller
     public function index()
     {
         //  Handle OPTIONS CORS preflight requests
-        if ($this->requestMethod === 'OPTIONS') {
+        if ($this->sRequestMethod === 'OPTIONS') {
 
             header('Access-Control-Allow-Origin: *');
             header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
@@ -127,9 +132,9 @@ class ApiRouter extends Nails_Controller
 
             // --------------------------------------------------------------------------
 
-            $output = array();
+            $aOut = array();
 
-            if ($this->outputSetFormat($this->outputFormat)) {
+            if ($this->outputSetFormat($this->sOutputFormat)) {
 
                 /**
                  * Look for a controller, app version first then the first one we
@@ -147,7 +152,7 @@ class ApiRouter extends Nails_Controller
                 }
 
                 //  Look for a valid controller
-                $controllerName = ucfirst($this->className) . '.php';
+                $controllerName = ucfirst($this->sClassName) . '.php';
 
                 foreach ($controllerPaths as $path) {
 
@@ -165,59 +170,57 @@ class ApiRouter extends Nails_Controller
                     //  Load the file and try and execute the method
                     require_once $controllerPath;
 
-                    $moduleName = 'Nails\\Api\\' . ucfirst($this->moduleName) . '\\' . ucfirst($this->className);
+                    $this->sModuleName = 'Nails\\Api\\' . ucfirst($this->sModuleName) . '\\' . ucfirst($this->sClassName);
 
-                    if (class_exists($moduleName)) {
+                    if (class_exists($this->sModuleName)) {
 
-                        if (!empty($moduleName::$requiresAuthentication) && !$this->user->isLoggedIn()) {
+                        $sClassName = $this->sModuleName;
+                        if (!empty($sClassName::$requiresAuthentication) && !$this->user->isLoggedIn()) {
 
-                            $output['status'] = 401;
-                            $output['error']  = 'You must be logged in.';
+                            $aOut['status'] = 401;
+                            $aOut['error']  = 'You must be logged in.';
                         }
 
                         /**
                          * If no errors and a scope is required, check the scope
                          */
-                        if (empty($output) && !empty($moduleName::$requiresScope)) {
+                        if (empty($aOut) && !empty($sClassName::$requiresScope)) {
 
 
-                            if (!$this->user_access_token_model->hasScope($accessToken, $moduleName::$requiresScope)) {
+                            if (!$this->user_access_token_model->hasScope($accessToken, $sClassName::$requiresScope)) {
 
-                                $output['status'] = 401;
-                                $output['error']  = 'Access token with "' . $moduleName::$requiresScope;
-                                $output['error'] .= '" scope is required.';
+                                $aOut['status'] = 401;
+                                $aOut['error']  = 'Access token with "' . $sClassName::$requiresScope;
+                                $aOut['error'] .= '" scope is required.';
                             }
                         }
 
                         /**
                          * If no errors so far, begin execution
                          */
-                        if (empty($output)) {
-
-                            //  Save a reference to $this, so that API controllers can interact with the router
-                            $this->data['apiRouter'] = $this;
+                        if (empty($aOut)) {
 
                             //  New instance of the controller
-                            $instance = new $moduleName();
+                            $instance = new $this->sModuleName($this);
 
                             /**
                              * We need to look for the appropriate method; we'll look in the following order:
                              *
-                             * - {requestMethod}Remap()
-                             * - {requestMethod}{method}()
+                             * - {sRequestMethod}Remap()
+                             * - {sRequestMethod}{method}()
                              * - anyRemap()
                              * - any{method}()
                              *
                              * The second parameter is whether the method is a remap method or not.
                              */
 
-                            $methods = array(
+                            $aMethods = array(
                                 array(
-                                    strtolower($this->requestMethod) . 'Remap',
+                                    strtolower($this->sRequestMethod) . 'Remap',
                                     true
                                 ),
                                 array(
-                                    strtolower($this->requestMethod) . ucfirst($this->method),
+                                    strtolower($this->sRequestMethod) . ucfirst($this->sMethod),
                                     false
                                 ),
                                 array(
@@ -225,77 +228,80 @@ class ApiRouter extends Nails_Controller
                                     true
                                 ),
                                 array(
-                                    'any' . ucfirst($this->method),
+                                    'any' . ucfirst($this->sMethod),
                                     false
                                 )
                             );
 
-                            $didFindRoute = false;
+                            $bDidFindRoute = false;
 
-                            foreach ($methods as $methodName) {
+                            foreach ($aMethods as $aMethodName) {
 
-                                if (is_callable(array($instance, $methodName[0]))) {
+                                if (is_callable(array($instance, $aMethodName[0]))) {
 
                                     /**
                                      * If the method we're trying to call is a remap method, then the first
                                      * param should be the name of the method being called
                                      */
 
-                                    if ($methodName[1]) {
+                                    if ($aMethodName[1]) {
 
-                                        $params = array_merge(array($this->method), $this->params);
+                                        $aParams = array_merge(array($this->sMethod), $this->aParams);
 
                                     } else {
 
-                                        $params = $this->params;
+                                        $aParams = $this->aParams;
                                     }
 
-                                    $didFindRoute = true;
-                                    $output       = call_user_func_array(array($instance, $methodName[0]), $params);
+                                    $bDidFindRoute = true;
+                                    $aOut       = call_user_func_array(array($instance, $aMethodName[0]), $aParams);
                                     break;
                                 }
                             }
 
-                            if (!$didFindRoute) {
+                            if (!$bDidFindRoute) {
 
-                                $output['status'] = 404;
-                                $output['error']  = '"' . $this->requestMethod . ': ' . $this->moduleName . '/';
-                                $output['error'] .= $this->className . '/' . $this->method;
-                                $output['error'] .= '" is not a valid API route.';
+                                $aOut['status'] = 404;
+                                $aOut['error']  = '"' . $this->sRequestMethod . ': ' . $this->sModuleName . '/';
+                                $aOut['error'] .= $this->sClassName . '/' . $this->sMethod;
+                                $aOut['error'] .= '" is not a valid API route.';
                             }
                         }
 
                     } else {
 
-                        $output['status'] = 500;
-                        $output['error']  = '"' . $this->moduleName . '" is incorrectly configured.';
+                        $aOut['status'] = 500;
+                        $aOut['error']  = '"' . $this->sModuleName . '" is incorrectly configured.';
+                        $this->writeLog($aOut['error']);
                     }
 
                 } else {
 
-                    $output['status'] = 404;
-                    $output['error']  = '"' . $this->moduleName . '/' . $this->method . '" is not a valid API route.';
+                    $aOut['status'] = 404;
+                    $aOut['error']  = '"' . $this->sModuleName . '/' . $this->sMethod . '" is not a valid API route.';
+                    $this->writeLog($aOut['error']);
                 }
 
             } else {
 
-                $output['status']   = 400;
-                $output['error']    = '"' . $this->outputFormat . '" is not a valid format.';
-                $this->outputFormat = 'JSON';
+                $aOut['status']   = 400;
+                $aOut['error']    = '"' . $this->sOutputFormat . '" is not a valid format.';
+                $this->writeLog($aOut['error']);
+                $this->sOutputFormat = 'JSON';
             }
 
-            $this->output($output);
+            $this->output($aOut);
         }
     }
 
     // --------------------------------------------------------------------------
 
     /**
-     * Sends $out to the browser in the desired format
-     * @param  array $out The data to output to the browser
+     * Sends $aOut to the browser in the desired format
+     * @param  array $aOut The data to output to the browser
      * @return void
      */
-    protected function output($out = array())
+    protected function output($aOut = array())
     {
         //  Set cache headers
         $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate');
@@ -312,11 +318,11 @@ class ApiRouter extends Nails_Controller
         // --------------------------------------------------------------------------
 
         //  Send the correct status header, default to 200 OK
-        if (isset($out['status'])) {
+        if (isset($aOut['status'])) {
 
-            $out['status'] = (int) $out['status'];
+            $aOut['status'] = (int) $aOut['status'];
 
-            switch ($out['status']) {
+            switch ($aOut['status']) {
 
                 case 400:
 
@@ -345,9 +351,9 @@ class ApiRouter extends Nails_Controller
 
             }
 
-        } elseif (is_array($out)) {
+        } elseif (is_array($aOut)) {
 
-            $out['status'] = 200;
+            $aOut['status'] = 200;
             $headerString  = '200 OK';
 
         } else {
@@ -355,7 +361,7 @@ class ApiRouter extends Nails_Controller
             $headerString = '200 OK';
         }
 
-        if ($this->outputSendHeader) {
+        if ($this->bOutputSendHeader) {
 
             $this->output->set_header($serverProtocol . ' ' . $headerString);
         }
@@ -363,47 +369,47 @@ class ApiRouter extends Nails_Controller
         // --------------------------------------------------------------------------
 
         //  Output content
-        switch ($this->outputFormat) {
+        switch ($this->sOutputFormat) {
 
             case 'TXT':
 
-                $out = $this->outputTxt($out);
+                $aOut = $this->outputTxt($aOut);
                 break;
 
             case 'JSON':
 
-                $out = $this->outputJson($out);
+                $aOut = $this->outputJson($aOut);
                 break;
         }
 
-        $this->output->set_output($out);
+        $this->output->set_output($aOut);
     }
 
     // --------------------------------------------------------------------------
 
     /**
-     * Formats $out as a plain text string formatted as JSON (for easy reading)
+     * Formats $aOut as a plain text string formatted as JSON (for easy reading)
      * but a plaintext contentType
-     * @param  array $out The result of the API call
+     * @param  array $aOut The result of the API call
      * @return string
      */
-    private function outputTxt($out)
+    private function outputTxt($aOut)
     {
         $this->output->set_content_type('text/html');
-        return defined('JSON_PRETTY_PRINT') ? json_encode($out, JSON_PRETTY_PRINT) : json_encode($out);
+        return defined('JSON_PRETTY_PRINT') ? json_encode($aOut, JSON_PRETTY_PRINT) : json_encode($aOut);
     }
 
     // --------------------------------------------------------------------------
 
     /**
-     * Formats $out as a JSON string
-     * @param  array $out The result of the API call
+     * Formats $aOut as a JSON string
+     * @param  array $aOut The result of the API call
      * @return string
      */
-    private function outputJson($out)
+    private function outputJson($aOut)
     {
         $this->output->set_content_type('application/json');
-        return defined('JSON_PRETTY_PRINT') ? json_encode($out, JSON_PRETTY_PRINT) : json_encode($out);
+        return defined('JSON_PRETTY_PRINT') ? json_encode($aOut, JSON_PRETTY_PRINT) : json_encode($aOut);
     }
 
     // --------------------------------------------------------------------------
@@ -417,7 +423,7 @@ class ApiRouter extends Nails_Controller
     {
         if ($this->isValidFormat($format)) {
 
-            $this->outputFormat = strtoupper($format);
+            $this->sOutputFormat = strtoupper($format);
             return true;
         }
 
@@ -433,7 +439,7 @@ class ApiRouter extends Nails_Controller
      */
     public function outputSendHeader($sendHeader)
     {
-        $this->outputSendHeader = !empty($sendHeader);
+        $this->bOutputSendHeader = !empty($sendHeader);
     }
 
     // --------------------------------------------------------------------------
@@ -445,6 +451,18 @@ class ApiRouter extends Nails_Controller
      */
     private function isValidFormat($format)
     {
-        return in_array(strtoupper($format), $this->outputValidFormats);
+        return in_array(strtoupper($format), $this->aOutputValidFormats);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Write a line to the API log
+     * @param string $sLine The line to write
+     */
+    public function writeLog($sLine)
+    {
+        $sLine  = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine . "\n";
+        $this->oLogger->line($sLine);
     }
 }
