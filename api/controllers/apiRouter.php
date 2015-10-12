@@ -112,8 +112,8 @@ class ApiRouter extends Nails_Controller
              * and POST arrays.
              */
 
-            $this->load->model('auth/user_access_token_model');
-            $accessToken = $this->input->get_request_header('X-accesstoken');
+            $oUserAccessTokenModel = \Nails\Factory::model('UserAccessToken', 'nailsapp/module-auth');
+            $accessToken           = $this->input->get_request_header('X-accesstoken');
 
             if (!$accessToken) {
 
@@ -122,7 +122,7 @@ class ApiRouter extends Nails_Controller
 
             if ($accessToken) {
 
-                $accessToken = $this->user_access_token_model->getByValidToken($accessToken);
+                $accessToken = $oUserAccessTokenModel->getByValidToken($accessToken);
 
                 if ($accessToken) {
 
@@ -187,7 +187,7 @@ class ApiRouter extends Nails_Controller
                         if (empty($aOut) && !empty($sClassName::$requiresScope)) {
 
 
-                            if (!$this->user_access_token_model->hasScope($accessToken, $sClassName::$requiresScope)) {
+                            if (!$oUserAccessTokenModel->hasScope($accessToken, $sClassName::$requiresScope)) {
 
                                 $aOut['status'] = 401;
                                 $aOut['error']  = 'Access token with "' . $sClassName::$requiresScope;
