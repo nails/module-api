@@ -13,7 +13,7 @@
  * @link
  */
 
-namespace Nails\Api\Controllers;
+namespace Nails\Api\Controller;
 
 class Standard extends Base
 {

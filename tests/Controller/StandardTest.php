@@ -1,6 +1,6 @@
 <?php
 
-namespace Nails\Api\Controllers;
+namespace Nails\Api\Controller;
 
 class StandardTest extends \PHPUnit_Framework_TestCase
 {

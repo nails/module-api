@@ -10,7 +10,7 @@
  * @link
  */
 
-namespace Nails\Api\Controllers;
+namespace Nails\Api\Controller;
 
 class Base extends \MX_Controller
 {
