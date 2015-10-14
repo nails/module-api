@@ -1,7 +1,5 @@
 <?php
 
-namespace Nails\Routes\Api;
-
 /**
  * Generates API routes
  *
@@ -11,6 +9,8 @@ namespace Nails\Routes\Api;
  * @author      Nails Dev Team
  * @link
  */
+
+namespace Nails\Routes\Api;
 
 class Routes
 {

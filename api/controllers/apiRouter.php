@@ -10,6 +10,8 @@
  * @link
  */
 
+use Nails\Factory;
+
 class ApiRouter extends Nails_Controller
 {
     private $sRequestMethod;
@@ -82,8 +84,8 @@ class ApiRouter extends Nails_Controller
         $this->aParams = array_slice($uriArray, 3);
 
         //  Configure logging
-        $oDateTime     = \Nails\Factory::factory('DateTime');
-        $this->oLogger = \Nails\Factory::service('Logger');
+        $oDateTime     = Factory::factory('DateTime');
+        $this->oLogger = Factory::service('Logger');
         $this->oLogger->setFile('api-' . $oDateTime->format('y-m-d') . '.php');
     }
 
@@ -112,7 +114,7 @@ class ApiRouter extends Nails_Controller
              * and POST arrays.
              */
 
-            $oUserAccessTokenModel = \Nails\Factory::model('UserAccessToken', 'nailsapp/module-auth');
+            $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
             $accessToken           = $this->input->get_request_header('X-accesstoken');
 
             if (!$accessToken) {
