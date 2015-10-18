@@ -72,7 +72,8 @@ class ApiRouter extends Nails_Controller
         }
 
         //  Remove the module prefix (i.e "api/") then explode into segments
-        $uriString = substr($uriString, 4);
+        //  Using regex as some systems will report a leading slash (e.g CLI)
+        $uriString = preg_replace('#/?api/#', '', $sUri);
         $uriArray  = explode('/', $uriString);
 
         //  Work out the sModuleName, sClassName and method
@@ -464,7 +465,7 @@ class ApiRouter extends Nails_Controller
      */
     public function writeLog($sLine)
     {
-        $sLine  = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine . "\n";
+        $sLine  = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
         $this->oLogger->line($sLine);
     }
 }
