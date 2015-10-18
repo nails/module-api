@@ -73,7 +73,7 @@ class ApiRouter extends Nails_Controller
 
         //  Remove the module prefix (i.e "api/") then explode into segments
         //  Using regex as some systems will report a leading slash (e.g CLI)
-        $uriString = preg_replace('#/?api/#', '', $sUri);
+        $uriString = preg_replace('#/?api/#', '', $uriString);
         $uriArray  = explode('/', $uriString);
 
         //  Work out the sModuleName, sClassName and method
