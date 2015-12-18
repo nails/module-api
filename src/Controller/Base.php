@@ -14,16 +14,15 @@ namespace Nails\Api\Controller;
 
 class Base extends \MX_Controller
 {
-    protected $data;
-    protected $oApiRouter;
+    /**
+     * Require the user be authenticated to use any endpoint
+     */
+    const REQUIRE_AUTH = false;
 
     // --------------------------------------------------------------------------
 
-    /**
-     * Whether the controller requires that the user be authenticated or not
-     * @var boolean
-     */
-    public static $requiresAuthentication = false;
+    protected $data;
+    protected $oApiRouter;
 
     // --------------------------------------------------------------------------
 

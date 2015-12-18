@@ -178,7 +178,8 @@ class ApiRouter extends Nails_Controller
                     if (class_exists($this->sModuleName)) {
 
                         $sClassName = $this->sModuleName;
-                        if (!empty($sClassName::$requiresAuthentication) && !$this->user->isLoggedIn()) {
+
+                        if (!empty($sClassName::REQUIRE_AUTH) && !$this->user->isLoggedIn()) {
 
                             $aOut['status'] = 401;
                             $aOut['error']  = 'You must be logged in.';
