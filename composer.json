@@ -42,7 +42,8 @@
         "nails" :
         {
             "moduleName": "api",
-            "type": "module"
+            "type": "module",
+            "namespace": "Nails\\Api\\"
         }
     }
 }
