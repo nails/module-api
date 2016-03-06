@@ -275,7 +275,7 @@ class ApiRouter extends Nails_Controller
                     } else {
 
                         $aOut['status'] = 500;
-                        $aOut['error']  = '"' . $this->sModuleName . '" is incorrectly configured.';
+                        $aOut['error']  = '"' . $this->sModuleName . '" is incorrectly configured; class does not exist.';
                         $this->writeLog($aOut['error']);
                     }
 
