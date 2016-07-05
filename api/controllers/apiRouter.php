@@ -119,7 +119,6 @@ class ApiRouter extends Nails_Controller
             $accessToken           = $this->input->get_request_header('X-accesstoken');
 
             if (!$accessToken) {
-
                 $accessToken = $this->input->get_post('accessToken');
             }
 
@@ -128,7 +127,6 @@ class ApiRouter extends Nails_Controller
                 $accessToken = $oUserAccessTokenModel->getByValidToken($accessToken);
 
                 if ($accessToken) {
-
                     $this->user_model->setLoginData($accessToken->user_id, false);
                 }
             }
@@ -150,7 +148,6 @@ class ApiRouter extends Nails_Controller
                 $nailsModules = _NAILS_GET_MODULES();
 
                 foreach ($nailsModules as $module) {
-
                     $controllerPaths[] = $module->path . 'api/controllers/';
                 }
 
@@ -162,7 +159,6 @@ class ApiRouter extends Nails_Controller
                     $fullPath = $path . $controllerName;
 
                     if (is_file($fullPath)) {
-
                         $controllerPath = $fullPath;
                         break;
                     }
@@ -180,7 +176,6 @@ class ApiRouter extends Nails_Controller
                         $sClassName = $this->sModuleName;
 
                         if (!empty($sClassName::REQUIRE_AUTH) && !$this->user->isLoggedIn()) {
-
                             $aOut['status'] = 401;
                             $aOut['error']  = 'You must be logged in.';
                         }
@@ -189,10 +184,7 @@ class ApiRouter extends Nails_Controller
                          * If no errors and a scope is required, check the scope
                          */
                         if (empty($aOut) && !empty($sClassName::$requiresScope)) {
-
-
                             if (!$oUserAccessTokenModel->hasScope($accessToken, $sClassName::$requiresScope)) {
-
                                 $aOut['status'] = 401;
                                 $aOut['error']  = 'Access token with "' . $sClassName::$requiresScope;
                                 $aOut['error'] .= '" scope is required.';
@@ -307,86 +299,68 @@ class ApiRouter extends Nails_Controller
      */
     protected function output($aOut = array())
     {
+        $oInput  = Factory::service('Input');
+        $oOutput = Factory::service('Output');
+
         //  Set cache headers
-        $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate');
-        $this->output->set_header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
-        $this->output->set_header('Pragma: no-cache');
+        $oOutput->set_header('Cache-Control: no-store, no-cache, must-revalidate');
+        $oOutput->set_header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+        $oOutput->set_header('Pragma: no-cache');
 
         //  Set access control headers
-        $this->output->set_header('Access-Control-Allow-Origin: *');
-        $this->output->set_header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
-        $this->output->set_header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
+        $oOutput->set_header('Access-Control-Allow-Origin: *');
+        $oOutput->set_header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
+        $oOutput->set_header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
 
-        $serverProtocol = $this->input->server('SERVER_PROTOCOL');
+        $sServerProtocol = $oInput->server('SERVER_PROTOCOL');
 
         // --------------------------------------------------------------------------
 
         //  Send the correct status header, default to 200 OK
+        $oHttpCodes = Factory::service('HttpCodes');
+
         if (isset($aOut['status'])) {
 
             $aOut['status'] = (int) $aOut['status'];
+            $sHttpCode      = $aOut['status'];
+            $sHttpString    = $oHttpCodes->getByCode($aOut['status']);
 
-            switch ($aOut['status']) {
-
-                case 400:
-
-                    $headerString = '400 Bad Request';
-                    break;
-
-                case 401:
-
-                    $headerString = '401 Unauthorized';
-                    break;
-
-                case 404:
-
-                    $headerString = '404 Not Found';
-                    break;
-
-                case 500:
-
-                    $headerString = '500 Internal Server Error';
-                    break;
-
-                default:
-
-                    $headerString = '200 OK';
-                    break;
-
+            if (empty($sHttpString)) {
+                $aOut['status'] = 200;
+                $sHttpCode      = $aOut['status'];
+                $sHttpString    = $oHttpCodes->getByCode($aOut['status']);
             }
 
         } elseif (is_array($aOut)) {
 
             $aOut['status'] = 200;
-            $headerString  = '200 OK';
+            $sHttpCode      = $aOut['status'];
+            $sHttpString    = $oHttpCodes->getByCode($aOut['status']);
 
         } else {
 
-            $headerString = '200 OK';
+            $sHttpCode   = 200;
+            $sHttpString = $oHttpCodes::STATUS_200;
         }
 
         if ($this->bOutputSendHeader) {
-
-            $this->output->set_header($serverProtocol . ' ' . $headerString);
+            $oOutput->set_header($sServerProtocol . ' ' . $sHttpCode . ' ' . $sHttpString);
         }
 
         // --------------------------------------------------------------------------
 
         //  Output content
         switch ($this->sOutputFormat) {
-
             case 'TXT':
-
                 $aOut = $this->outputTxt($aOut);
                 break;
 
             case 'JSON':
-
                 $aOut = $this->outputJson($aOut);
                 break;
         }
 
-        $this->output->set_output($aOut);
+        $oOutput->set_output($aOut);
     }
 
     // --------------------------------------------------------------------------
@@ -426,7 +400,6 @@ class ApiRouter extends Nails_Controller
     public function outputSetFormat($format)
     {
         if ($this->isValidFormat($format)) {
-
             $this->sOutputFormat = strtoupper($format);
             return true;
         }
