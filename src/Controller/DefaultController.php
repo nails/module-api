@@ -36,6 +36,11 @@ class DefaultController extends Base
      */
     const CONFIG_MAX_ITEMS_PER_REQUEST = 100;
 
+    /**
+     * The maximum number of items to return per page
+     */
+    const CONFIG_MAX_ITEMS_PER_PAGE = 10;
+
     // --------------------------------------------------------------------------
 
     /**
@@ -53,6 +58,48 @@ class DefaultController extends Base
         if (empty(static::CONFIG_MODEL_PROVIDER)) {
             throw new NailsException('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Get multiple items
+     * @param  array   $aData    Any data to pass to the model
+     * @param  integer $iPage    The page to display
+     * @param  integer $iPerPage The number of items to display at the moment
+     * @return array
+     */
+    public function getIndex($aData = array(), $iPage = null, $iPerPage = null)
+    {
+        $oInput     = Factory::service('Input');
+        $oItemModel = Factory::model(
+            static::CONFIG_MODEL_NAME,
+            static::CONFIG_MODEL_PROVIDER
+        );
+
+        if (is_null($iPage)) {
+            $iPage = (int) $oInput->get('page') ?: 1;
+        }
+
+        if (is_null($iPerPage)) {
+            $iPerPage = static::CONFIG_MAX_ITEMS_PER_PAGE;
+        }
+
+        $aOut     = array();
+        $aResults = $oItemModel->getAll(
+            $iPage,
+            $iPerPage,
+            $aData
+        );
+
+        foreach ($aResults as $oItem) {
+            $aOut[] = $this->formatObject($oItem);
+        }
+
+        //  @todo - paging
+        return array(
+            'data' => $aOut
+        );
     }
 
     // --------------------------------------------------------------------------
@@ -99,7 +146,7 @@ class DefaultController extends Base
         }
 
         if ($oInput->get('id')) {
-            return array('data' => $aOut[0]);
+            return array('data' => !empty($aOut[0]) ? $aOut[0] : null);
         } else {
             return array('data' => $aOut);
         }
@@ -142,6 +189,61 @@ class DefaultController extends Base
     // --------------------------------------------------------------------------
 
     /**
+     * Creates a new item
+     * @return array
+     */
+    public function postIndex()
+    {
+        $oInput     = Factory::service('Input');
+        $oItemModel = Factory::model(
+            static::CONFIG_MODEL_NAME,
+            static::CONFIG_MODEL_PROVIDER
+        );
+
+        try {
+
+            //  Validate fields
+            $aIgnore  = array('id', 'slug', 'created', 'is_deleted', 'created_by', 'modified', 'modified_by');
+            $aFields  = $oItemModel->describeFields();
+            $aValid   = array();
+            $aInvalid = array();
+            foreach ($aFields as $oField) {
+                if (in_array($oField->key, $aIgnore)) {
+                    continue;
+                }
+                $aValid[] = $oField->key;
+            }
+
+            $aPost = $oInput->post();
+            foreach ($aPost as $sKey => $sValue) {
+                if (!in_array($sKey, $aValid)) {
+                    $aInvalid[] = $sKey;
+                }
+            }
+
+            if (!empty($aInvalid)) {
+                throw new \Exception('The following arguments are invalid: ' . implode(', ', $aInvalid), 400);
+            }
+
+            $oItem = $oItemModel->create($aPost, true);
+            $aOut  = array(
+                'data' => $this->formatObject($oItem)
+            );
+
+        } catch (\Exception $e) {
+            $aOut = array(
+                'status' => $e->getCode(),
+                'error'  => $e->getMessage()
+            );
+        }
+
+        return $aOut;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Format the output
      * @param \stdClass $oObj The object to format
      * @return array
      */

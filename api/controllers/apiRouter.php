@@ -12,16 +12,16 @@
 
 use Nails\Factory;
 
-class ApiRouter extends Nails_Controller
+class ApiRouter extends NAILS_Controller
 {
     private $sRequestMethod;
     private $sModuleName;
     private $sClassName;
     private $sMethod;
-    private $aParams;
     private $aOutputValidFormats;
     private $sOutputFormat;
     private $bOutputSendHeader;
+    private $oLogger;
 
     // --------------------------------------------------------------------------
 
@@ -44,13 +44,14 @@ class ApiRouter extends Nails_Controller
         // --------------------------------------------------------------------------
 
         //  Work out the request method
-        $this->sRequestMethod = $this->input->server('REQUEST_METHOD');
+        $oInput               = Factory::service('Input');
+        $this->sRequestMethod = $oInput->server('REQUEST_METHOD');
         $this->sRequestMethod = $this->sRequestMethod ? $this->sRequestMethod : 'GET';
 
         /**
          * In order to work out the next few parts we'll analyse the URI string manually.
-         * We're doing this ebcause of the optional return type at the end of the string;
-         * it's easier to regex that quickly,r emove it, then split up the segments.
+         * We're doing this because of the optional return type at the end of the string;
+         * it's easier to regex that quickly, remove it, then split up the segments.
          */
 
         $uriString = uri_string();
@@ -81,9 +82,6 @@ class ApiRouter extends Nails_Controller
         $this->sClassName  = array_key_exists(1, $uriArray) ? $uriArray[1] : $this->sModuleName;
         $this->sMethod     = array_key_exists(2, $uriArray) ? $uriArray[2] : 'index';
 
-        //  What's left of the array are the parameters to pass to the method
-        $this->aParams = array_slice($uriArray, 3);
-
         //  Configure logging
         $oDateTime     = Factory::factory('DateTime');
         $this->oLogger = Factory::service('Logger');
@@ -94,11 +92,11 @@ class ApiRouter extends Nails_Controller
 
     /**
      * Route the call to the correct place
-     * @return Void
+     * @return void
      */
     public function index()
     {
-        //  Handle OPTIONS CORS preflight requests
+        //  Handle OPTIONS CORS pre-flight requests
         if ($this->sRequestMethod === 'OPTIONS') {
 
             header('Access-Control-Allow-Origin: *');
@@ -115,11 +113,12 @@ class ApiRouter extends Nails_Controller
              * and POST arrays.
              */
 
+            $oInput                = Factory::service('Input');
             $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
-            $accessToken           = $this->input->get_request_header('X-accesstoken');
+            $accessToken           = $oInput->get_request_header('X-accesstoken');
 
             if (!$accessToken) {
-                $accessToken = $this->input->get_post('accessToken');
+                $accessToken = $oInput->get_post('accessToken');
             }
 
             if ($accessToken) {
@@ -127,7 +126,8 @@ class ApiRouter extends Nails_Controller
                 $accessToken = $oUserAccessTokenModel->getByValidToken($accessToken);
 
                 if ($accessToken) {
-                    $this->user_model->setLoginData($accessToken->user_id, false);
+                    $oUserModel = Factory::model('User', 'nailsapp/module-auth');
+                    $oUserModel->setLoginData($accessToken->user_id, false);
                 }
             }
 
@@ -175,7 +175,7 @@ class ApiRouter extends Nails_Controller
 
                         $sClassName = $this->sModuleName;
 
-                        if (!empty($sClassName::REQUIRE_AUTH) && !$this->user->isLoggedIn()) {
+                        if (!empty($sClassName::REQUIRE_AUTH) && !isLoggedIn()) {
                             $aOut['status'] = 401;
                             $aOut['error']  = 'You must be logged in.';
                         }
@@ -234,29 +234,13 @@ class ApiRouter extends Nails_Controller
                             foreach ($aMethods as $aMethodName) {
 
                                 if (is_callable(array($instance, $aMethodName[0]))) {
-
-                                    /**
-                                     * If the method we're trying to call is a remap method, then the first
-                                     * param should be the name of the method being called
-                                     */
-
-                                    if ($aMethodName[1]) {
-
-                                        $aParams = array_merge(array($this->sMethod), $this->aParams);
-
-                                    } else {
-
-                                        $aParams = $this->aParams;
-                                    }
-
                                     $bDidFindRoute = true;
-                                    $aOut       = call_user_func_array(array($instance, $aMethodName[0]), $aParams);
+                                    $aOut          = call_user_func(array($instance, $aMethodName[0]));
                                     break;
                                 }
                             }
 
                             if (!$bDidFindRoute) {
-
                                 $aOut['status'] = 404;
                                 $aOut['error']  = '"' . $this->sRequestMethod . ': ' . $this->sModuleName . '/';
                                 $aOut['error'] .= $this->sClassName . '/' . $this->sMethod;
@@ -373,7 +357,8 @@ class ApiRouter extends Nails_Controller
      */
     private function outputTxt($aOut)
     {
-        $this->output->set_content_type('text/html');
+        $oOutput = Factory::service('Output');
+        $oOutput->set_content_type('text/html');
         return defined('JSON_PRETTY_PRINT') ? json_encode($aOut, JSON_PRETTY_PRINT) : json_encode($aOut);
     }
 
@@ -386,7 +371,8 @@ class ApiRouter extends Nails_Controller
      */
     private function outputJson($aOut)
     {
-        $this->output->set_content_type('application/json');
+        $oOutput = Factory::service('Output');
+        $oOutput->set_content_type('application/json');
         return defined('JSON_PRETTY_PRINT') ? json_encode($aOut, JSON_PRETTY_PRINT) : json_encode($aOut);
     }
 
@@ -410,8 +396,8 @@ class ApiRouter extends Nails_Controller
     // --------------------------------------------------------------------------
 
     /**
-     * Sets whether the status header shoud be sent or not
-     * @param  boolean $sendHeader Whether the ehader should be sent or not
+     * Sets whether the status header should be sent or not
+     * @param  boolean $sendHeader Whether the header should be sent or not
      * @return void
      */
     public function outputSendHeader($sendHeader)
@@ -423,12 +409,12 @@ class ApiRouter extends Nails_Controller
 
     /**
      * Determines whether the format is valid
-     * @param string The format to check
+     * @param string $sFormat The format to check
      * @return boolean
      */
-    private function isValidFormat($format)
+    private function isValidFormat($sFormat)
     {
-        return in_array(strtoupper($format), $this->aOutputValidFormats);
+        return in_array(strtoupper($sFormat), $this->aOutputValidFormats);
     }
 
     // --------------------------------------------------------------------------
