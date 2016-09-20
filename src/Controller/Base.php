@@ -63,4 +63,19 @@ class Base extends \MX_Controller
     {
         $this->oApiRouter->writeLog($sLine);
     }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Whether the user is authenticated.
+     * @param  string $sHttpMethod The HTTP Method protocol being used
+     * @param  string $sMethod     The controller method to execute
+     * @return mixed               Boolean true or false. Can also return an array
+     *                             where the two elements (status and error) which
+     *                             will customise the response code and message.
+     */
+    public static function isAuthenticated($sHttpMethod = '', $sMethod = '')
+    {
+        return static::REQUIRE_AUTH && !isLoggedIn() ? false : true;
+    }
 }

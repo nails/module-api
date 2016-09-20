@@ -174,10 +174,11 @@ class ApiRouter extends NAILS_Controller
                     if (class_exists($this->sModuleName)) {
 
                         $sClassName = $this->sModuleName;
-
-                        if (!empty($sClassName::REQUIRE_AUTH) && !isLoggedIn()) {
-                            $aOut['status'] = 401;
-                            $aOut['error']  = 'You must be logged in.';
+                        $mAuth      = $sClassName::isAuthenticated($this->sRequestMethod, $this->sMethod);
+                        if ($mAuth !== true) {
+                            $oHttpCodes = Factory::service('HttpCodes');
+                            $aOut['status'] = !empty($mAuth['status']) ? $mAuth['status'] : 401;
+                            $aOut['error']  = !empty($mAuth['error']) ? $mAuth['error'] : $oHttpCodes::STATUS_401;
                         }
 
                         /**
