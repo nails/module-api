@@ -11,8 +11,9 @@
  */
 
 use Nails\Factory;
+use App\Controller\Base;
 
-class ApiRouter extends NAILS_Controller
+class ApiRouter extends Base
 {
     private $sRequestMethod;
     private $sModuleName;
