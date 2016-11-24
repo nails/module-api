@@ -19,6 +19,7 @@ class ApiRouter extends Base
     private $sModuleName;
     private $sClassName;
     private $sMethod;
+    private $aParams;
     private $aOutputValidFormats;
     private $sOutputFormat;
     private $bOutputSendHeader;
@@ -82,6 +83,9 @@ class ApiRouter extends Base
         $this->sModuleName = array_key_exists(0, $uriArray) ? $uriArray[0] : null;
         $this->sClassName  = array_key_exists(1, $uriArray) ? $uriArray[1] : $this->sModuleName;
         $this->sMethod     = array_key_exists(2, $uriArray) ? $uriArray[2] : 'index';
+
+        //  What's left of the array are the parameters to pass to the method
+        $this->aParams = array_slice($uriArray, 3);
 
         //  Configure logging
         $oDateTime     = Factory::factory('DateTime');
@@ -236,8 +240,20 @@ class ApiRouter extends Base
                             foreach ($aMethods as $aMethodName) {
 
                                 if (is_callable(array($instance, $aMethodName[0]))) {
+
+                                    /**
+                                     * If the method we're trying to call is a remap method, then the first
+                                     * param should be the name of the method being called
+                                     */
+
+                                    if ($aMethodName[1]) {
+                                        $aParams = array_merge(array($this->sMethod), $this->aParams);
+                                    } else {
+                                        $aParams = $this->aParams;
+                                    }
+
                                     $bDidFindRoute = true;
-                                    $aOut          = call_user_func(array($instance, $aMethodName[0]));
+                                    $aOut          = call_user_func_array(array($instance, $aMethodName[0]), $aParams);
                                     break;
                                 }
                             }
