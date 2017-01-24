@@ -2,16 +2,15 @@
 
 namespace Nails\Api\Console\Command\Controller;
 
-use Nails\Console\Command\Base;
-use Nails\Environment;
-use Nails\Factory;
+use Nails\Console\Command\BaseMaker;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Create extends Base
+class Create extends BaseMaker
 {
-    const CONTROLLER_PATH            = FCPATH . APPPATH . 'modules/api/controllers/';
-    const CONTROLLER_PATH_PERMISSION = 0755;
+    const RESOURCE_PATH   = NAILS_PATH . 'nailsapp/module-api/resources/console/';
+    const CONTROLLER_PATH = FCPATH . 'application/modules/api/';
 
     // --------------------------------------------------------------------------
 
@@ -20,8 +19,19 @@ class Create extends Base
      */
     protected function configure()
     {
-        $this->setName('api:controller');
-        $this->setDescription('[WIP] Creates a new API controller based on an existing model');
+        $this->setName('make:controller:api');
+        $this->setDescription('[WIP] Creates a new Api controller');
+        $this->addArgument(
+            'modelName',
+            InputArgument::OPTIONAL,
+            'Define the name of the model on which to base the controller'
+        );
+        $this->addArgument(
+            'providerName',
+            InputArgument::OPTIONAL,
+            'Define the provider of the model',
+            'app'
+        );
     }
 
     // --------------------------------------------------------------------------
@@ -35,58 +45,21 @@ class Create extends Base
      */
     protected function execute(InputInterface $oInput, OutputInterface $oOutput)
     {
-        $oOutput->writeln('');
-        $oOutput->writeln('<info>-------------------------</info>');
-        $oOutput->writeln('<info>Nails API Controller Tool</info>');
-        $oOutput->writeln('<info>-------------------------</info>');
+        parent::execute($oInput, $oOutput);
 
         // --------------------------------------------------------------------------
 
-        //  Setup Factory - config files are required prior to set up
-        Factory::setup();
-
-        // --------------------------------------------------------------------------
-
-        //  Check environment
-        if (Environment::not('DEVELOPMENT')) {
+        try {
+            //  Ensure the paths exist
+            $this->createPath(self::CONTROLLER_PATH);
+            //  Create the controller
+            $this->createController();
+        } catch (\Exception $e) {
             return $this->abort(
-                $oOutput,
                 self::EXIT_CODE_FAILURE,
-                [
-                    'This tool is only available on DEVELOPMENT environments',
-                ]
+                $e->getMessage()
             );
         }
-
-        // --------------------------------------------------------------------------
-
-        //  Check we can write where we need to write
-        if (!is_dir(self::CONTROLLER_PATH)) {
-            if (!mkdir(self::CONTROLLER_PATH, self::CONTROLLER_PATH_PERMISSION, true)) {
-                return $this->abort(
-                    $oOutput,
-                    self::EXIT_CODE_FAILURE,
-                    [
-                        'Controller directory does not exist and could not be created',
-                        self::CONTROLLER_PATH,
-                    ]
-                );
-            }
-        } elseif (!is_writable(self::CONTROLLER_PATH)) {
-            return $this->abort(
-                $oOutput,
-                self::EXIT_CODE_FAILURE,
-                [
-                    'Controller directory exists but is not writeable',
-                    self::CONTROLLER_PATH,
-                ]
-            );
-        }
-
-        // --------------------------------------------------------------------------
-
-        //  @todo request model, verify valid then confirm with user before creating controller
-        //  @todo support defining multiple models
 
         // --------------------------------------------------------------------------
 
@@ -101,5 +74,26 @@ class Create extends Base
         $oOutput->writeln('Complete!');
 
         return self::EXIT_CODE_SUCCESS;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Create the Model
+     *
+     * @throws \Exception
+     * @return void
+     */
+    private function createController()
+    {
+        $aFields = $this->getArguments();
+
+        try {
+
+            dumpanddie($aFields);
+
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
 }
