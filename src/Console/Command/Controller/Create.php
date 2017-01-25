@@ -88,30 +88,42 @@ class Create extends BaseMaker
      */
     private function createController()
     {
-        $aFields = $this->getArguments();
+        $aFields  = $this->getArguments();
+        $aCreated = [];
 
         try {
 
-            //  Validate model exists by attempting to load it
-            Factory::model($aFields['MODEL_NAME'], $aFields['MODEL_PROVIDER']);
+            $aModels = array_filter(explode(',', $aFields['MODEL_NAME']));
 
-            //  Check for existing controller
-            $sPath  = static::CONTROLLER_PATH . $aFields['MODEL_NAME'] . '.php';
-            if (file_exists($sPath)) {
-                throw new ControllerExistsException(
-                    'Controller "' . $aFields['MODEL_NAME'] . '" exists already at path "' . $sPath . '"'
-                );
+            foreach ($aModels as $sModel) {
+
+                $aFields['MODEL_NAME'] = $sModel;
+                $this->oOutput->write('Creating controller <comment>' . $sModel . '</comment>... ');
+
+                //  Validate model exists by attempting to load it
+                Factory::model($sModel, $aFields['MODEL_PROVIDER']);
+
+                //  Check for existing controller
+                $sPath = static::CONTROLLER_PATH . $sModel . '.php';
+                if (file_exists($sPath)) {
+                    throw new ControllerExistsException(
+                        'Controller "' . $sModel . '" exists already at path "' . $sPath . '"'
+                    );
+                }
+
+                $this->createFile($sPath, $this->getResource('template/controller.php', $aFields));
+                $aCreated[] = $sPath;
+                $this->oOutput->writeln('<info>done!</info>');
             }
 
-            $this->createFile($sPath, $this->getResource('template/controller.php', $aFields));
-
-        } catch (ControllerExistsException $e) {
-            //  Do not clean up (delete existing controller)!
-            throw new \Exception($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            //  Clean up
-            if (!empty($sPath)) {
-                @unlink($sPath);
+            $this->oOutput->writeln('<error>failed!</error>');
+            //  Clean up created models
+            if (!empty($aCreated)) {
+                $this->oOutput->writeln('<error>Cleaning up - removing newly created controllers</error>');
+                foreach ($aCreated as $sPath) {
+                    @unlink($sPath);
+                }
             }
             throw new \Exception($e->getMessage());
         }
