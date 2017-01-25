@@ -24,6 +24,8 @@ If for whatever reason you need to simulate a 404, then do so using the `methodN
 
 ## Default Controller
 
+> Easily generate Default Controllers using the [Console Command](/docs/console/README.md)
+
 The `DefaultController` is a class which your API endpoints can extend in order to inherit a significant amount of functionality when interfacing with a single model. This allows you to quickly set up an endpoint which provides the following functionality:
 
 - Retrieve by a single ID
