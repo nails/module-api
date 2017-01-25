@@ -19,7 +19,7 @@ namespace Nails\Api\App;
 
 use Nails\Api\Controller\DefaultController;
 
-class {{CLASS_NAME}} extends DefaultController
+class {{MODEL_NAME}} extends DefaultController
 {
     const CONFIG_MODEL_NAME     = '{{MODEL_NAME}}';
     const CONFIG_MODEL_PROVIDER = '{{MODEL_PROVIDER}}';

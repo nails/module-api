@@ -2,15 +2,17 @@
 
 namespace Nails\Api\Console\Command\Controller;
 
+use Nails\Api\Exception\Console\ControllerExistsException;
 use Nails\Console\Command\BaseMaker;
+use Nails\Factory;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class Create extends BaseMaker
 {
-    const RESOURCE_PATH   = NAILS_PATH . 'nailsapp/module-api/resources/console/';
-    const CONTROLLER_PATH = FCPATH . 'application/modules/api/';
+    const RESOURCE_PATH   = NAILS_PATH . 'module-api/resources/console/';
+    const CONTROLLER_PATH = FCPATH . 'application/modules/api/controllers/';
 
     // --------------------------------------------------------------------------
 
@@ -20,14 +22,14 @@ class Create extends BaseMaker
     protected function configure()
     {
         $this->setName('make:controller:api');
-        $this->setDescription('[WIP] Creates a new Api controller');
+        $this->setDescription('Creates a new Api controller');
         $this->addArgument(
             'modelName',
             InputArgument::OPTIONAL,
             'Define the name of the model on which to base the controller'
         );
         $this->addArgument(
-            'providerName',
+            'modelProvider',
             InputArgument::OPTIONAL,
             'Define the provider of the model',
             'app'
@@ -90,9 +92,27 @@ class Create extends BaseMaker
 
         try {
 
-            dumpanddie($aFields);
+            //  Validate model exists by attempting to load it
+            Factory::model($aFields['MODEL_NAME'], $aFields['MODEL_PROVIDER']);
 
+            //  Check for existing controller
+            $sPath  = static::CONTROLLER_PATH . $aFields['MODEL_NAME'] . '.php';
+            if (file_exists($sPath)) {
+                throw new ControllerExistsException(
+                    'Controller "' . $aFields['MODEL_NAME'] . '" exists already at path "' . $sPath . '"'
+                );
+            }
+
+            $this->createFile($sPath, $this->getResource('template/controller.php', $aFields));
+
+        } catch (ControllerExistsException $e) {
+            //  Do not clean up (delete existing controller)!
+            throw new \Exception($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
+            //  Clean up
+            if (!empty($sPath)) {
+                @unlink($sPath);
+            }
             throw new \Exception($e->getMessage());
         }
     }
