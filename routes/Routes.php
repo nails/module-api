@@ -12,7 +12,9 @@
 
 namespace Nails\Routes\Api;
 
-class Routes
+use Nails\Common\Model\BaseRoutes;
+
+class Routes extends BaseRoutes
 {
     /**
      * Returns an array of routes for this module
@@ -22,7 +24,7 @@ class Routes
     public function getRoutes()
     {
         return [
-            'api/(:any)' => 'api/apiRouter/index'
+            'api/(:any)' => 'api/apiRouter/index',
         ];
     }
 }
