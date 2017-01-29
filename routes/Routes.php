@@ -16,12 +16,13 @@ class Routes
 {
     /**
      * Returns an array of routes for this module
+     *
      * @return array
      */
     public function getRoutes()
     {
-        $routes = array();
-        $routes['api/(:any)'] = 'api/apiRouter/index';
-        return $routes;
+        return [
+            'api/(:any)' => 'api/apiRouter/index'
+        ];
     }
 }
