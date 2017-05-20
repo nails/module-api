@@ -10,18 +10,17 @@
  * @link
  */
 
-namespace Nails\Routes\Api;
+namespace Nails\Api;
 
-use Nails\Common\Model\BaseRoutes;
+use Nails\Common\Interfaces\RouteGenerator;
 
-class Routes extends BaseRoutes
+class Routes implements RouteGenerator
 {
     /**
      * Returns an array of routes for this module
-     *
      * @return array
      */
-    public function getRoutes()
+    public static function generate()
     {
         return [
             'api/(:any)' => 'api/apiRouter/index',
