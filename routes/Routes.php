@@ -24,7 +24,7 @@ class Routes extends BaseRoutes
     public function getRoutes()
     {
         return [
-            'api/(:any)' => 'api/apiRouter/index',
+            'api/(.*)' => 'api/apiRouter/index',
         ];
     }
 }
