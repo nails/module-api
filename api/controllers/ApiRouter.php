@@ -147,7 +147,7 @@ class ApiRouter extends Base
                  * find in the modules.
                  */
                 $controllerPaths = array(
-                    FCPATH . APPPATH . 'modules/api/controllers/'
+                    APPPATH . 'modules/api/controllers/'
                 );
 
                 $nailsModules = _NAILS_GET_MODULES();

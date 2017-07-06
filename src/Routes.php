@@ -23,7 +23,7 @@ class Routes implements RouteGenerator
     public static function generate()
     {
         return [
-            'api/(:any)' => 'api/apiRouter/index',
+            'api/(.*)' => 'api/apiRouter/index',
         ];
     }
 }
