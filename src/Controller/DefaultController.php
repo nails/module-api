@@ -15,8 +15,8 @@
 
 namespace Nails\Api\Controller;
 
-use Nails\Factory;
 use Nails\Common\Exception\NailsException;
+use Nails\Factory;
 
 class DefaultController extends Base
 {
@@ -46,6 +46,7 @@ class DefaultController extends Base
     /**
      * DefaultController constructor.
      * @throws NailsException
+     *
      * @param $oApiRouter
      */
     public function __construct($oApiRouter)
@@ -64,12 +65,14 @@ class DefaultController extends Base
 
     /**
      * Get multiple items
+     *
      * @param  array   $aData    Any data to pass to the model
      * @param  integer $iPage    The page to display
      * @param  integer $iPerPage The number of items to display at the moment
+     *
      * @return array
      */
-    public function getIndex($aData = array(), $iPage = null, $iPerPage = null)
+    public function getIndex($aData = [], $iPage = null, $iPerPage = null)
     {
         $oInput     = Factory::service('Input');
         $oItemModel = Factory::model(
@@ -85,7 +88,7 @@ class DefaultController extends Base
             $iPerPage = static::CONFIG_MAX_ITEMS_PER_PAGE;
         }
 
-        $aOut     = array();
+        $aOut     = [];
         $aResults = $oItemModel->getAll(
             $iPage,
             $iPerPage,
@@ -97,9 +100,9 @@ class DefaultController extends Base
         }
 
         //  @todo - paging
-        return array(
-            'data' => $aOut
-        );
+        return [
+            'data' => $aOut,
+        ];
     }
 
     // --------------------------------------------------------------------------
@@ -108,7 +111,7 @@ class DefaultController extends Base
      * Return an item by it's ID, or an array of items by their ID.
      * @return array
      */
-    public function getId()
+    public function getId($aData = [])
     {
         $sIds   = '';
         $oInput = Factory::service('Input');
@@ -126,10 +129,10 @@ class DefaultController extends Base
         $aIds = array_unique($aIds);
 
         if (count($aIds) > self::CONFIG_MAX_ITEMS_PER_REQUEST) {
-            return array(
+            return [
                 'status' => 400,
-                'error'  => 'You can request a maximum of ' . self::CONFIG_MAX_ITEMS_PER_REQUEST . ' items per request'
-            );
+                'error'  => 'You can request a maximum of ' . self::CONFIG_MAX_ITEMS_PER_REQUEST . ' items per request',
+            ];
         }
 
         // --------------------------------------------------------------------------
@@ -138,17 +141,17 @@ class DefaultController extends Base
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
         );
-        $aResults   = $oItemModel->getByIds($aIds);
-        $aOut       = array();
+        $aResults   = $oItemModel->getByIds($aIds, $aData);
+        $aOut       = [];
 
         foreach ($aResults as $oItem) {
             $aOut[] = $this->formatObject($oItem);
         }
 
         if ($oInput->get('id')) {
-            return array('data' => !empty($aOut[0]) ? $aOut[0] : null);
+            return ['data' => !empty($aOut[0]) ? $aOut[0] : null];
         } else {
-            return array('data' => $aOut);
+            return ['data' => $aOut];
         }
     }
 
@@ -169,20 +172,20 @@ class DefaultController extends Base
 
         if (strlen($sKeywords) >= static::CONFIG_MIN_SEARCH_LENGTH) {
             $oResult = $oItemModel->search($sKeywords);
-            $aOut    = array();
+            $aOut    = [];
 
             foreach ($oResult->data as $oItem) {
                 $aOut[] = $this->formatObject($oItem);
             }
 
-            return array(
-                'data' => $aOut
-            );
+            return [
+                'data' => $aOut,
+            ];
         } else {
-            return array(
+            return [
                 'status' => 400,
-                'error' => 'Search term must be ' . static::CONFIG_MIN_SEARCH_LENGTH . ' characters or longer.'
-            );
+                'error'  => 'Search term must be ' . static::CONFIG_MIN_SEARCH_LENGTH . ' characters or longer.',
+            ];
         }
     }
 
@@ -203,10 +206,10 @@ class DefaultController extends Base
         try {
 
             //  Validate fields
-            $aIgnore  = array('id', 'slug', 'created', 'is_deleted', 'created_by', 'modified', 'modified_by');
+            $aIgnore  = ['id', 'slug', 'created', 'is_deleted', 'created_by', 'modified', 'modified_by'];
             $aFields  = $oItemModel->describeFields();
-            $aValid   = array();
-            $aInvalid = array();
+            $aValid   = [];
+            $aInvalid = [];
             foreach ($aFields as $oField) {
                 if (in_array($oField->key, $aIgnore)) {
                     continue;
@@ -226,15 +229,15 @@ class DefaultController extends Base
             }
 
             $oItem = $oItemModel->create($aPost, true);
-            $aOut  = array(
-                'data' => $this->formatObject($oItem)
-            );
+            $aOut  = [
+                'data' => $this->formatObject($oItem),
+            ];
 
         } catch (\Exception $e) {
-            $aOut = array(
+            $aOut = [
                 'status' => $e->getCode(),
-                'error'  => $e->getMessage()
-            );
+                'error'  => $e->getMessage(),
+            ];
         }
 
         return $aOut;
@@ -244,14 +247,16 @@ class DefaultController extends Base
 
     /**
      * Format the output
+     *
      * @param \stdClass $oObj The object to format
+     *
      * @return array
      */
     protected function formatObject($oObj)
     {
-        return array(
+        return [
             'id'    => $oObj->id,
-            'label' => $oObj->label
-        );
+            'label' => $oObj->label,
+        ];
     }
 }
