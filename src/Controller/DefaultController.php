@@ -159,9 +159,12 @@ class DefaultController extends Base
 
     /**
      * Search for an item
+     *
+     * @param array $aData The configuration array
+     *
      * @return array
      */
-    public function getSearch()
+    public function getSearch($aData = [])
     {
         $oInput     = Factory::service('Input');
         $sKeywords  = $oInput->get('keywords');
@@ -171,7 +174,7 @@ class DefaultController extends Base
         );
 
         if (strlen($sKeywords) >= static::CONFIG_MIN_SEARCH_LENGTH) {
-            $oResult = $oItemModel->search($sKeywords);
+            $oResult = $oItemModel->search($sKeywords, $aData);
             $aOut    = [];
 
             foreach ($oResult->data as $oItem) {
