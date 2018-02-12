@@ -120,10 +120,14 @@ class ApiRouter extends Base
 
             $oInput                = Factory::service('Input');
             $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
-            $accessToken           = $oInput->get_request_header('X-accesstoken');
+            $accessToken           = $oInput->header('X-accesstoken');
 
             if (!$accessToken) {
-                $accessToken = $oInput->get_post('accessToken');
+                $accessToken = $oInput->post('accessToken');
+            }
+
+            if (!$accessToken) {
+                $accessToken = $oInput->get('accessToken');
             }
 
             if ($accessToken) {
