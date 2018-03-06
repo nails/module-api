@@ -10,8 +10,9 @@
  * @link
  */
 
-use Nails\Factory;
 use App\Controller\Base;
+use Nails\Environment;
+use Nails\Factory;
 
 class ApiRouter extends Base
 {
@@ -37,11 +38,11 @@ class ApiRouter extends Base
         // --------------------------------------------------------------------------
 
         //  Set defaults
-        $this->aOutputValidFormats = array(
+        $this->aOutputValidFormats = [
             'TXT',
-            'JSON'
-        );
-        $this->bOutputSendHeader = true;
+            'JSON',
+        ];
+        $this->bOutputSendHeader   = true;
 
         // --------------------------------------------------------------------------
 
@@ -70,7 +71,6 @@ class ApiRouter extends Base
             $uriString = preg_replace($formatPattern, '', $uriString);
 
         } else {
-
             $this->sOutputFormat = 'JSON';
         }
 
@@ -120,10 +120,14 @@ class ApiRouter extends Base
 
             $oInput                = Factory::service('Input');
             $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
-            $accessToken           = $oInput->get_request_header('X-accesstoken');
+            $accessToken           = $oInput->header('X-accesstoken');
 
             if (!$accessToken) {
-                $accessToken = $oInput->get_post('accessToken');
+                $accessToken = $oInput->post('accessToken');
+            }
+
+            if (!$accessToken) {
+                $accessToken = $oInput->get('accessToken');
             }
 
             if ($accessToken) {
@@ -138,7 +142,7 @@ class ApiRouter extends Base
 
             // --------------------------------------------------------------------------
 
-            $aOut = array();
+            $aOut = [];
 
             if ($this->outputSetFormat($this->sOutputFormat)) {
 
@@ -146,9 +150,9 @@ class ApiRouter extends Base
                  * Look for a controller, app version first then the first one we
                  * find in the modules.
                  */
-                $controllerPaths = array(
-                    APPPATH . 'modules/api/controllers/'
-                );
+                $controllerPaths = [
+                    APPPATH . 'modules/api/controllers/',
+                ];
 
                 $nailsModules = _NAILS_GET_MODULES();
 
@@ -181,7 +185,7 @@ class ApiRouter extends Base
                         $sClassName = $this->sModuleName;
                         $mAuth      = $sClassName::isAuthenticated($this->sRequestMethod, $this->sMethod);
                         if ($mAuth !== true) {
-                            $oHttpCodes = Factory::service('HttpCodes');
+                            $oHttpCodes     = Factory::service('HttpCodes');
                             $aOut['status'] = !empty($mAuth['status']) ? $mAuth['status'] : 401;
                             $aOut['error']  = !empty($mAuth['error']) ? $mAuth['error'] : $oHttpCodes::STATUS_401;
                         }
@@ -193,7 +197,7 @@ class ApiRouter extends Base
                             if (!$oUserAccessTokenModel->hasScope($accessToken, $sClassName::$requiresScope)) {
                                 $aOut['status'] = 401;
                                 $aOut['error']  = 'Access token with "' . $sClassName::$requiresScope;
-                                $aOut['error'] .= '" scope is required.';
+                                $aOut['error']  .= '" scope is required.';
                             }
                         }
 
@@ -216,30 +220,30 @@ class ApiRouter extends Base
                              * The second parameter is whether the method is a remap method or not.
                              */
 
-                            $aMethods = array(
-                                array(
+                            $aMethods = [
+                                [
                                     strtolower($this->sRequestMethod) . 'Remap',
-                                    true
-                                ),
-                                array(
+                                    true,
+                                ],
+                                [
                                     strtolower($this->sRequestMethod) . ucfirst($this->sMethod),
-                                    false
-                                ),
-                                array(
+                                    false,
+                                ],
+                                [
                                     'anyRemap',
-                                    true
-                                ),
-                                array(
+                                    true,
+                                ],
+                                [
                                     'any' . ucfirst($this->sMethod),
-                                    false
-                                )
-                            );
+                                    false,
+                                ],
+                            ];
 
                             $bDidFindRoute = false;
 
                             foreach ($aMethods as $aMethodName) {
 
-                                if (is_callable(array($instance, $aMethodName[0]))) {
+                                if (is_callable([$instance, $aMethodName[0]])) {
 
                                     /**
                                      * If the method we're trying to call is a remap method, then the first
@@ -247,13 +251,13 @@ class ApiRouter extends Base
                                      */
 
                                     if ($aMethodName[1]) {
-                                        $aParams = array_merge(array($this->sMethod), $this->aParams);
+                                        $aParams = array_merge([$this->sMethod], $this->aParams);
                                     } else {
                                         $aParams = $this->aParams;
                                     }
 
                                     $bDidFindRoute = true;
-                                    $aOut          = call_user_func_array(array($instance, $aMethodName[0]), $aParams);
+                                    $aOut          = call_user_func_array([$instance, $aMethodName[0]], $aParams);
                                     break;
                                 }
                             }
@@ -261,8 +265,8 @@ class ApiRouter extends Base
                             if (!$bDidFindRoute) {
                                 $aOut['status'] = 404;
                                 $aOut['error']  = '"' . $this->sRequestMethod . ': ' . $this->sModuleName . '/';
-                                $aOut['error'] .= $this->sClassName . '/' . $this->sMethod;
-                                $aOut['error'] .= '" is not a valid API route.';
+                                $aOut['error']  .= $this->sClassName . '/' . $this->sMethod;
+                                $aOut['error']  .= '" is not a valid API route.';
                             }
                         }
 
@@ -282,8 +286,8 @@ class ApiRouter extends Base
 
             } else {
 
-                $aOut['status']   = 400;
-                $aOut['error']    = '"' . $this->sOutputFormat . '" is not a valid format.';
+                $aOut['status'] = 400;
+                $aOut['error']  = '"' . $this->sOutputFormat . '" is not a valid format.';
                 $this->writeLog($aOut['error']);
                 $this->sOutputFormat = 'JSON';
             }
@@ -296,10 +300,12 @@ class ApiRouter extends Base
 
     /**
      * Sends $aOut to the browser in the desired format
+     *
      * @param  array $aOut The data to output to the browser
+     *
      * @return void
      */
-    protected function output($aOut = array())
+    protected function output($aOut = [])
     {
         $oInput  = Factory::service('Input');
         $oOutput = Factory::service('Output');
@@ -370,35 +376,49 @@ class ApiRouter extends Base
     /**
      * Formats $aOut as a plain text string formatted as JSON (for easy reading)
      * but a plaintext contentType
+     *
      * @param  array $aOut The result of the API call
+     *
      * @return string
      */
     private function outputTxt($aOut)
     {
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('text/html');
-        return defined('JSON_PRETTY_PRINT') ? json_encode($aOut, JSON_PRETTY_PRINT) : json_encode($aOut);
+        if (Environment::not('PRODUCTION') && defined('JSON_PRETTY_PRINT')) {
+            return json_encode($aOut, JSON_PRETTY_PRINT);
+        } else {
+            return json_encode($aOut);
+        }
     }
 
     // --------------------------------------------------------------------------
 
     /**
      * Formats $aOut as a JSON string
+     *
      * @param  array $aOut The result of the API call
+     *
      * @return string
      */
     private function outputJson($aOut)
     {
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('application/json');
-        return defined('JSON_PRETTY_PRINT') ? json_encode($aOut, JSON_PRETTY_PRINT) : json_encode($aOut);
+        if (Environment::not('PRODUCTION') && defined('JSON_PRETTY_PRINT')) {
+            return json_encode($aOut, JSON_PRETTY_PRINT);
+        } else {
+            return json_encode($aOut);
+        }
     }
 
     // --------------------------------------------------------------------------
 
     /**
      * Sets the output format
+     *
      * @param  string $format The format to use
+     *
      * @return boolean
      */
     public function outputSetFormat($format)
@@ -415,7 +435,9 @@ class ApiRouter extends Base
 
     /**
      * Sets whether the status header should be sent or not
+     *
      * @param  boolean $sendHeader Whether the header should be sent or not
+     *
      * @return void
      */
     public function outputSendHeader($sendHeader)
@@ -427,7 +449,9 @@ class ApiRouter extends Base
 
     /**
      * Determines whether the format is valid
+     *
      * @param string $sFormat The format to check
+     *
      * @return boolean
      */
     private function isValidFormat($sFormat)
@@ -439,11 +463,12 @@ class ApiRouter extends Base
 
     /**
      * Write a line to the API log
+     *
      * @param string $sLine The line to write
      */
     public function writeLog($sLine)
     {
-        $sLine  = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
+        $sLine = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
         $this->oLogger->line($sLine);
     }
 }
