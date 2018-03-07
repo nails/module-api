@@ -168,14 +168,20 @@ class DefaultController extends Base
     {
         $oInput     = Factory::service('Input');
         $sKeywords  = $oInput->get('keywords');
+        $iPage      = (int) $oInput->get('page');
         $oItemModel = Factory::model(
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
         );
 
         if (strlen($sKeywords) >= static::CONFIG_MIN_SEARCH_LENGTH) {
-            $oResult = $oItemModel->search($sKeywords, $aData);
             $aOut    = [];
+            $oResult = $oItemModel->search(
+                $sKeywords,
+                $iPage,
+                static::CONFIG_MAX_ITEMS_PER_PAGE,
+                $aData
+            );
 
             foreach ($oResult->data as $oItem) {
                 $aOut[] = $this->formatObject($oItem);
