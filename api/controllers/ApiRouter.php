@@ -105,7 +105,7 @@ class ApiRouter extends Base
         if ($this->sRequestMethod === 'OPTIONS') {
 
             header('Access-Control-Allow-Origin: *');
-            header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
+            header('Access-Control-Allow-Headers: x-access-token, content, origin, content-type');
             header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
             exit;
 
@@ -120,7 +120,7 @@ class ApiRouter extends Base
 
             $oInput                = Factory::service('Input');
             $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
-            $accessToken           = $oInput->header('X-accesstoken');
+            $accessToken           = $oInput->header('X-Access-Token');
 
             if (!$accessToken) {
                 $accessToken = $oInput->post('accessToken');
@@ -317,7 +317,7 @@ class ApiRouter extends Base
 
         //  Set access control headers
         $oOutput->set_header('Access-Control-Allow-Origin: *');
-        $oOutput->set_header('Access-Control-Allow-Headers: X-accesstoken, content, origin, content-type');
+        $oOutput->set_header('Access-Control-Allow-Headers: x-access-token, content, origin, content-type');
         $oOutput->set_header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
 
         $sServerProtocol = $oInput->server('SERVER_PROTOCOL');
