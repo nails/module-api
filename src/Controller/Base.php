@@ -12,7 +12,24 @@
 
 namespace Nails\Api\Controller;
 
-class Base extends \MX_Controller
+// --------------------------------------------------------------------------
+
+/**
+ * Allow the app to add functionality, if needed
+ */
+if (class_exists('\App\Api\Controller\Base')) {
+    class BaseMiddle extends \App\Api\Controller\Base
+    {
+    }
+} else {
+    class BaseMiddle extends \Nails\Common\Controller\Base
+    {
+    }
+}
+
+// --------------------------------------------------------------------------
+
+class Base extends BaseMiddle
 {
     /**
      * Require the user be authenticated to use any endpoint
