@@ -10,11 +10,27 @@
  * @link
  */
 
-use App\Controller\Base;
 use Nails\Environment;
 use Nails\Factory;
 
-class ApiRouter extends Base
+// --------------------------------------------------------------------------
+
+/**
+ * Allow the app to add functionality, if needed
+ */
+if (class_exists('\App\Api\Controller\BaseRouter')) {
+    class BaseMiddle extends \App\Api\Controller\BaseRouter
+    {
+    }
+} else {
+    class BaseMiddle extends \Nails\Common\Controller\Base
+    {
+    }
+}
+
+// --------------------------------------------------------------------------
+
+class ApiRouter extends BaseMiddle
 {
     private $sRequestMethod;
     private $sModuleName;

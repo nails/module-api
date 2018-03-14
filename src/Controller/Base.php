@@ -22,14 +22,14 @@ if (class_exists('\App\Api\Controller\Base')) {
     {
     }
 } else {
-    class BaseMiddle extends \Nails\Common\Controller\Base
+    class BaseMiddle extends \MX_Controller
     {
     }
 }
 
 // --------------------------------------------------------------------------
 
-class Base extends BaseMiddle
+abstract class Base extends BaseMiddle
 {
     /**
      * Require the user be authenticated to use any endpoint
