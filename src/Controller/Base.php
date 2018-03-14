@@ -23,11 +23,11 @@ use Nails\Factory;
  * Allow the app to add functionality, if needed
  */
 if (class_exists('\App\Api\Controller\Base')) {
-    class BaseMiddle extends \App\Api\Controller\Base
+   abstract class BaseMiddle extends \App\Api\Controller\Base
     {
     }
 } else {
-    class BaseMiddle
+   abstract class BaseMiddle
     {
     }
 }
@@ -58,7 +58,7 @@ abstract class Base extends BaseMiddle
         //  Setup Events
         $oEventService = Factory::service('Event');
 
-        //  Call the API:STARTUP event, admin is constructing
+        //  Call the API:STARTUP event, API is constructing
         $oEventService->trigger(Events::API_STARTUP, 'nailsapp/module-api');
 
         // --------------------------------------------------------------------------
