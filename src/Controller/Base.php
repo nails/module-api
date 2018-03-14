@@ -14,6 +14,11 @@ namespace Nails\Api\Controller;
 
 // --------------------------------------------------------------------------
 
+use Nails\Api\Events;
+use Nails\Factory;
+
+// --------------------------------------------------------------------------
+
 /**
  * Allow the app to add functionality, if needed
  */
@@ -22,7 +27,7 @@ if (class_exists('\App\Api\Controller\Base')) {
     {
     }
 } else {
-    class BaseMiddle extends \MX_Controller
+    class BaseMiddle
     {
     }
 }
@@ -49,8 +54,22 @@ abstract class Base extends BaseMiddle
     public function __construct($oApiRouter)
     {
         parent::__construct();
+
+        //  Setup Events
+        $oEventService = Factory::service('Event');
+
+        //  Call the API:STARTUP event, admin is constructing
+        $oEventService->trigger(Events::API_STARTUP, 'nailsapp/module-api');
+
+        // --------------------------------------------------------------------------
+
         $this->data       =& getControllerData();
         $this->oApiRouter = $oApiRouter;
+
+        // --------------------------------------------------------------------------
+
+        //  Call the API:READY event, API is all geared up and ready to go
+        $oEventService->trigger(Events::API_READY, 'nailsapp/module-api');
     }
 
     // --------------------------------------------------------------------------
