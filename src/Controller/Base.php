@@ -23,12 +23,15 @@ use Nails\Factory;
  * Allow the app to add functionality, if needed
  */
 if (class_exists('\App\Api\Controller\Base')) {
-   abstract class BaseMiddle extends \App\Api\Controller\Base
+    abstract class BaseMiddle extends \App\Api\Controller\Base
     {
     }
 } else {
-   abstract class BaseMiddle
+    abstract class BaseMiddle
     {
+        public function __construct()
+        {
+        }
     }
 }
 
