@@ -96,9 +96,9 @@ class ApiRouter extends BaseMiddle
         $uriArray  = explode('/', $uriString);
 
         //  Work out the sModuleName, sClassName and method
-        $this->sModuleName = array_key_exists(0, $uriArray) ? $uriArray[0] : null;
-        $this->sClassName  = array_key_exists(1, $uriArray) ? $uriArray[1] : $this->sModuleName;
-        $this->sMethod     = array_key_exists(2, $uriArray) ? $uriArray[2] : 'index';
+        $this->sModuleName = getFromArray(0, $uriArray, null);
+        $this->sClassName  = ucfirst(getFromArray(1, $uriArray, $this->sModuleName));
+        $this->sMethod     = getFromArray(2, $uriArray, 'index');
 
         //  What's left of the array are the parameters to pass to the method
         $this->aParams = array_slice($uriArray, 3);
@@ -170,9 +170,23 @@ class ApiRouter extends BaseMiddle
                     APPPATH . 'modules/api/controllers/',
                 ];
 
-                $nailsModules = _NAILS_GET_MODULES();
+                $nailsModules        = _NAILS_GET_MODULES();
+                $sOriginalController = $this->sClassName;
 
                 foreach ($nailsModules as $module) {
+                    if (!empty($module->data->{"nailsapp/module-api"}->{"controller-map"})) {
+                        $aMap             = (array) $module->data->{"nailsapp/module-api"}->{"controller-map"};
+                        $this->sClassName = getFromArray($this->sClassName, $aMap, $this->sClassName);
+
+                        /**
+                         * This prevents users from accessing the "correct" controller,
+                         * so we only have one valid route
+                         */
+                        $sRemapped = array_search($sOriginalController, $aMap);
+                        if ($sRemapped !== false) {
+                            $this->sClassName = $sRemapped;
+                        }
+                    }
                     $controllerPaths[] = $module->path . 'api/controllers/';
                 }
 
@@ -182,8 +196,7 @@ class ApiRouter extends BaseMiddle
                 foreach ($controllerPaths as $path) {
 
                     $fullPath = $path . $controllerName;
-
-                    if (is_file($fullPath)) {
+                    if (fileExistsCS($fullPath)) {
                         $controllerPath = $fullPath;
                         break;
                     }
