@@ -4,4 +4,5 @@
 
 This module provides a unified interface for modules to provide API endpoints.
 
-- [Controllers](/docs/controllers/README.md)
+- [Controllers](controllers/README.md)
+- [Console](console/README.md)

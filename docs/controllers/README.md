@@ -52,3 +52,29 @@ In addition to these two constants, you can also set:
 
 - `CONFIG_MIN_SEARCH_LENGTH` - The minimum length of string for a search; defaults to 0.
 - `CONFIG_MAX_ITEMS_PER_REQUEST` - the maximum number of items which can be queried for by ID; defaults to 100.
+
+
+
+## URL/Controller Mapping
+
+By default, the URL maps to the controller class on disk, however there may be certain circumstances where you may wish to use a URL which does not map to the named file (e.g. if you wish to use a reserved word).
+
+This is achived by specifying the `controller-map` property in the module's `composer.json` file under the `nailsapp/module-api` namespace:
+
+```json
+{
+  "extra": {
+    "nails" : {
+      "data": {
+        "nailsapp/module-api": {
+          "controller-map": {
+            "Object": "MyObject"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+In the above example, the url `api/mymodule/object` would resolve to the controller `MyObject.php`.
