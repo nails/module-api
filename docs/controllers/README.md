@@ -2,7 +2,7 @@
 > Documentation is a WIP.
 
 
-## Base Controller
+## Base Controller
 
 All controllers should inherit from the base controller `Nails\Api\Controller\Base`.
 
