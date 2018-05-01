@@ -41,6 +41,11 @@ class DefaultController extends Base
      */
     const CONFIG_MAX_ITEMS_PER_PAGE = 10;
 
+    /**
+     * Which fields to ignore when POSTing
+     */
+    const CONFIG_POST_IGNORE_FIELDS = ['id', 'slug', 'created', 'is_deleted', 'created_by', 'modified', 'modified_by'];
+
     // --------------------------------------------------------------------------
 
     /**
@@ -204,8 +209,9 @@ class DefaultController extends Base
      * Creates a new item
      * @return array
      */
-    public function postIndex()
+    public function postRemap()
     {
+        $oUri       = Factory::service('Uri');
         $oInput     = Factory::service('Input');
         $oItemModel = Factory::model(
             static::CONFIG_MODEL_NAME,
@@ -215,12 +221,11 @@ class DefaultController extends Base
         try {
 
             //  Validate fields
-            $aIgnore  = ['id', 'slug', 'created', 'is_deleted', 'created_by', 'modified', 'modified_by'];
             $aFields  = $oItemModel->describeFields();
             $aValid   = [];
             $aInvalid = [];
             foreach ($aFields as $oField) {
-                if (in_array($oField->key, $aIgnore)) {
+                if (in_array($oField->key, static::CONFIG_POST_IGNORE_FIELDS)) {
                     continue;
                 }
                 $aValid[] = $oField->key;
@@ -237,8 +242,25 @@ class DefaultController extends Base
                 throw new \Exception('The following arguments are invalid: ' . implode(', ', $aInvalid), 400);
             }
 
-            $oItem = $oItemModel->create($aPost, true);
-            $aOut  = [
+            $iItemId = (int) $oUri->segment(4);
+            if ($iItemId) {
+                $oItem = $oItemModel->getById($iItemId);
+                if (empty($oItem)) {
+                    throw new \Exception('Item does not exist', 404);
+                } elseif (!$oItemModel->update($iItemId, $aPost)) {
+                    throw new \Exception('Failed to update item', 500);
+                } elseif (classUses($oItemModel, 'Nails\Common\Traits\Caching')) {
+                    $oItemModel->disableCache();
+                }
+                $oItem = $oItemModel->getById($iItemId);
+                if (classUses($oItemModel, 'Nails\Common\Traits\Caching')) {
+                    $oItemModel->enableCache();
+                }
+            } else {
+                $oItem = $oItemModel->create($aPost, true);
+            }
+
+            $aOut = [
                 'data' => $this->formatObject($oItem),
             ];
 
