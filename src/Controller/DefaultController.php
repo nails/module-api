@@ -15,7 +15,7 @@
 
 namespace Nails\Api\Controller;
 
-use Nails\Common\Exception\NailsException;
+use Nails\Api\Exception\ApiException;
 use Nails\Factory;
 
 class DefaultController extends Base
@@ -50,7 +50,7 @@ class DefaultController extends Base
 
     /**
      * DefaultController constructor.
-     * @throws NailsException
+     * @throws ApiException
      *
      * @param $oApiRouter
      */
@@ -59,10 +59,10 @@ class DefaultController extends Base
         parent::__construct($oApiRouter);
 
         if (empty(static::CONFIG_MODEL_NAME)) {
-            throw new NailsException('"static::CONFIG_MODEL_NAME" is required.');
+            throw new ApiException('"static::CONFIG_MODEL_NAME" is required.');
         }
         if (empty(static::CONFIG_MODEL_PROVIDER)) {
-            throw new NailsException('"static::CONFIG_MODEL_PROVIDER" is required.');
+            throw new ApiException('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
     }
 
