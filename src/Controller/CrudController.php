@@ -15,12 +15,6 @@ class CrudController extends Base
     const CONFIG_MODEL_PROVIDER = '';
 
     /**
-     * The namespace to use for the returned data
-     * @var string
-     */
-    const CONFIG_RESPONSE_NAMESPACE = 'data';
-
-    /**
      * What to use for looking up resources; ID, SLUG, or TOKEN
      * @var string
      */
@@ -41,17 +35,17 @@ class CrudController extends Base
      *
      * @param \ApiRouter $oApiRouter the ApiRouter object
      *
-     * @throws ApiException
+     * @throws \Exception
      */
     public function __construct($oApiRouter)
     {
         parent::__construct($oApiRouter);
 
         if (empty(static::CONFIG_MODEL_NAME)) {
-            throw new ApiException('"static::CONFIG_MODEL_NAME" is required.');
+            throw new \Exception('"static::CONFIG_MODEL_NAME" is required.');
         }
         if (empty(static::CONFIG_MODEL_PROVIDER)) {
-            throw new ApiException('"static::CONFIG_MODEL_PROVIDER" is required.');
+            throw new \Exception('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
 
         $this->oModel = Factory::model(
@@ -69,34 +63,30 @@ class CrudController extends Base
      */
     public function getRemap()
     {
-        $oUri = Factory::service('Uri');
+        $oUri       = Factory::service('Uri');
+        $oHttpCodes = Factory::service('HttpCodes');
         if ($oUri->segment(4)) {
 
-            try {
-
-                $oItem = $this->lookUpResource();
-                if (!$oItem) {
-                    throw new ApiException('Resource not found', 404);
-                }
-
-                //  @todo (Pablo - 2018-05-08) - Validate user can view resource
-
-                return [
-                    static::CONFIG_RESPONSE_NAMESPACE => $this->formatObject($oItem),
-                ];
-
-            } catch (\Exception $e) {
-                return [
-                    'status' => (int) $e->getCode() ?: 500,
-                    'error'  => $e->getMessage(),
-                ];
+            $oItem = $this->lookUpResource();
+            if (!$oItem) {
+                throw new ApiException(
+                    'Resource not found',
+                    $oHttpCodes::STATUS_NOT_FOUND
+                );
             }
 
+            //  @todo (Pablo - 2018-05-08) - Validate user can view resource
+
+            $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+            $oResponse->setData($this->formatObject($oItem));
+
         } else {
-            return [
-                static::CONFIG_RESPONSE_NAMESPACE => array_map([$this, 'formatObject'], $this->oModel->getAll()),
-            ];
+            //  @todo (Pablo - 2018-06-24) - Paging
+            $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+            $oResponse->setData(array_map([$this, 'formatObject'], $this->oModel->getAll()));
         }
+
+        return $oResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -107,28 +97,28 @@ class CrudController extends Base
      */
     public function postIndex()
     {
-        try {
 
-            //  @todo (Pablo - 2018-05-08) - Validate user can create resource
-            //  @todo (Pablo - 2018-05-08) - Validate
-            //  @todo (Pablo - 2018-05-08) - Create
+        //  @todo (Pablo - 2018-05-08) - Validate user can create resource
+        //  @todo (Pablo - 2018-05-08) - Validate
+        //  @todo (Pablo - 2018-05-08) - Create
+        //  @todo (Pablo - 2018-05-08) - Extract fields safely
 
-            //  @todo (Pablo - 2018-05-08) - Extract fields safely
-            $oInput = Factory::service('Input');
-            $aData  = $oInput->post();
+        $oInput     = Factory::service('Input');
+        $oHttpCodes = Factory::service('HttpCodes');
+        $aData      = $oInput->post();
 
-            $oItem = $this->oModel->create($aData, true);
-
-            return [
-                static::CONFIG_RESPONSE_NAMESPACE => $oItem,
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'status' => (int) $e->getCode() ?: 500,
-                'error'  => $e->getMessage(),
-            ];
+        $oItem = $this->oModel->create($aData, true);
+        if (empty($oItem)) {
+            throw new ApiException(
+                'Failed to create resource. ' . $this->oModel->lastError(),
+                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+            );
         }
+
+        $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+        $oResponse->setData($this->formatObject($oItem));
+
+        return $oResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -139,33 +129,28 @@ class CrudController extends Base
      */
     public function putRemap()
     {
-        try {
-
-            $oItem = $this->lookUpResource();
-            if (!$oItem) {
-                throw new ApiException('Resource not found', 404);
-            }
-
-            //  @todo (Pablo - 2018-05-08) - Validate user can update resource
-            //  @todo (Pablo - 2018-05-08) - Validate
-            //  @todo (Pablo - 2018-05-08) - Update
-
-            //  @todo (Pablo - 2018-05-08) - Extract fields safely
-            $oInput = Factory::service('Input');
-            $aData  = $oInput->post();
-
-            if (!$this->oModel->update($oItem->id, $aData)) {
-                throw new ApiException('Failed to update resource. ' . $this->oModel->lastError());
-            }
-
-            return [];
-
-        } catch (\Exception $e) {
-            return [
-                'status' => (int) $e->getCode() ?: 500,
-                'error'  => $e->getMessage(),
-            ];
+        $oItem = $this->lookUpResource();
+        if (!$oItem) {
+            throw new ApiException('Resource not found', 404);
         }
+
+        //  @todo (Pablo - 2018-05-08) - Validate user can update resource
+        //  @todo (Pablo - 2018-05-08) - Validate
+        //  @todo (Pablo - 2018-05-08) - Update
+        //  @todo (Pablo - 2018-05-08) - Extract fields safely
+
+        $oInput     = Factory::service('Input');
+        $oHttpCodes = Factory::service('HttpCodes');
+        $aData      = $oInput->post();
+
+        if (!$this->oModel->update($oItem->id, $aData)) {
+            throw new ApiException(
+                'Failed to update resource. ' . $this->oModel->lastError(),
+                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+
+        return Factory::factory('ApiResponse', 'nailsapp/module-api');
     }
 
     // --------------------------------------------------------------------------
@@ -176,27 +161,25 @@ class CrudController extends Base
      */
     public function deleteRemap()
     {
-        try {
-
-            $oItem = $this->lookUpResource();
-            if (!$oItem) {
-                throw new ApiException('Resource not found', 404);
-            }
-
-            //  @todo (Pablo - 2018-05-08) - Validate user can delete resource
-
-            if (!$this->oModel->delete($oItem->id)) {
-                throw new ApiException('Failed to delete resource. ' . $this->oModel->lastError());
-            }
-
-            return [];
-
-        } catch (\Exception $e) {
-            return [
-                'status' => (int) $e->getCode() ?: 500,
-                'error'  => $e->getMessage(),
-            ];
+        $oHttpCodes = Factory::service('HttpCodes');
+        $oItem      = $this->lookUpResource();
+        if (!$oItem) {
+            throw new ApiException(
+                'Resource not found',
+                $oHttpCodes::STATUS_NOT_FOUND
+            );
         }
+
+        //  @todo (Pablo - 2018-05-08) - Validate user can delete resource
+
+        if (!$this->oModel->delete($oItem->id)) {
+            throw new ApiException(
+                'Failed to delete resource. ' . $this->oModel->lastError(),
+                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+
+        return Factory::factory('ApiResponse', 'nailsapp/module-api');
     }
 
     // --------------------------------------------------------------------------

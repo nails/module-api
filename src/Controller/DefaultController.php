@@ -93,21 +93,16 @@ class DefaultController extends Base
             $iPerPage = static::CONFIG_MAX_ITEMS_PER_PAGE;
         }
 
-        $aOut     = [];
         $aResults = $oItemModel->getAll(
             $iPage,
             $iPerPage,
             $aData
         );
 
-        foreach ($aResults as $oItem) {
-            $aOut[] = $this->formatObject($oItem);
-        }
-
-        //  @todo - paging
-        return [
-            'data' => $aOut,
-        ];
+        //  @todo (Pablo - 2018-06-24) - Paging
+        $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+        $oResponse->setData(array_map([$this, 'formatObject'], $aResults));
+        return $oResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -134,10 +129,10 @@ class DefaultController extends Base
         $aIds = array_unique($aIds);
 
         if (count($aIds) > self::CONFIG_MAX_ITEMS_PER_REQUEST) {
-            return [
-                'status' => 400,
-                'error'  => 'You can request a maximum of ' . self::CONFIG_MAX_ITEMS_PER_REQUEST . ' items per request',
-            ];
+            throw new ApiException(
+                'You can request a maximum of ' . self::CONFIG_MAX_ITEMS_PER_REQUEST . ' items per request',
+                $oHttpCodes::STATUS_BAD_REQUEST
+            );
         }
 
         // --------------------------------------------------------------------------
@@ -147,17 +142,17 @@ class DefaultController extends Base
             static::CONFIG_MODEL_PROVIDER
         );
         $aResults   = $oItemModel->getByIds($aIds, $aData);
-        $aOut       = [];
-
-        foreach ($aResults as $oItem) {
-            $aOut[] = $this->formatObject($oItem);
-        }
 
         if ($oInput->get('id')) {
-            return ['data' => !empty($aOut[0]) ? $aOut[0] : null];
+            $oItem = reset($aResults);
+            $mData = $oItem ? $this->formatObject($oItem) : null;
         } else {
-            return ['data' => $aOut];
+            $mData = array_map([$this, 'formatObject'], $aResults);
         }
+
+        $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+        $oResponse->setData($mData);
+        return $oResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -172,35 +167,31 @@ class DefaultController extends Base
     public function getSearch($aData = [])
     {
         $oInput     = Factory::service('Input');
-        $sKeywords  = $oInput->get('keywords');
-        $iPage      = (int) $oInput->get('page');
+        $oHttpCodes = Factory::service('HttpCodes');
         $oItemModel = Factory::model(
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
         );
+        $sKeywords  = $oInput->get('keywords');
+        $iPage      = (int) $oInput->get('page');
 
-        if (strlen($sKeywords) >= static::CONFIG_MIN_SEARCH_LENGTH) {
-            $aOut    = [];
-            $oResult = $oItemModel->search(
-                $sKeywords,
-                $iPage,
-                static::CONFIG_MAX_ITEMS_PER_PAGE,
-                $aData
+        if (strlen($sKeywords) < static::CONFIG_MIN_SEARCH_LENGTH) {
+            throw new ApiException(
+                'Search term must be ' . static::CONFIG_MIN_SEARCH_LENGTH . ' characters or longer.',
+                $oHttpCodes::STATUS__BAD_REQUEST
             );
-
-            foreach ($oResult->data as $oItem) {
-                $aOut[] = $this->formatObject($oItem);
-            }
-
-            return [
-                'data' => $aOut,
-            ];
-        } else {
-            return [
-                'status' => 400,
-                'error'  => 'Search term must be ' . static::CONFIG_MIN_SEARCH_LENGTH . ' characters or longer.',
-            ];
         }
+
+        $oResult = $oItemModel->search(
+            $sKeywords,
+            $iPage,
+            static::CONFIG_MAX_ITEMS_PER_PAGE,
+            $aData
+        );
+
+        $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+        $oResponse->setData(array_map([$this, 'formatObject'], $oResult->data));
+        return $oResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -213,65 +204,63 @@ class DefaultController extends Base
     {
         $oUri       = Factory::service('Uri');
         $oInput     = Factory::service('Input');
+        $oHttpCodes = Factory::service('HttpCodes');
         $oItemModel = Factory::model(
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
         );
-
-        try {
-
-            //  Validate fields
-            $aFields  = $oItemModel->describeFields();
-            $aValid   = [];
-            $aInvalid = [];
-            foreach ($aFields as $oField) {
-                if (in_array($oField->key, static::CONFIG_POST_IGNORE_FIELDS)) {
-                    continue;
-                }
-                $aValid[] = $oField->key;
+        //  Validate fields
+        $aFields  = $oItemModel->describeFields();
+        $aValid   = [];
+        $aInvalid = [];
+        foreach ($aFields as $oField) {
+            if (in_array($oField->key, static::CONFIG_POST_IGNORE_FIELDS)) {
+                continue;
             }
-
-            $aPost = $oInput->post();
-            foreach ($aPost as $sKey => $sValue) {
-                if (!in_array($sKey, $aValid)) {
-                    $aInvalid[] = $sKey;
-                }
-            }
-
-            if (!empty($aInvalid)) {
-                throw new \Exception('The following arguments are invalid: ' . implode(', ', $aInvalid), 400);
-            }
-
-            $iItemId = (int) $oUri->segment(4);
-            if ($iItemId) {
-                $oItem = $oItemModel->getById($iItemId);
-                if (empty($oItem)) {
-                    throw new \Exception('Item does not exist', 404);
-                } elseif (!$oItemModel->update($iItemId, $aPost)) {
-                    throw new \Exception('Failed to update item', 500);
-                } elseif (classUses($oItemModel, 'Nails\Common\Traits\Caching')) {
-                    $oItemModel->disableCache();
-                }
-                $oItem = $oItemModel->getById($iItemId);
-                if (classUses($oItemModel, 'Nails\Common\Traits\Caching')) {
-                    $oItemModel->enableCache();
-                }
-            } else {
-                $oItem = $oItemModel->create($aPost, true);
-            }
-
-            $aOut = [
-                'data' => $this->formatObject($oItem),
-            ];
-
-        } catch (\Exception $e) {
-            $aOut = [
-                'status' => $e->getCode(),
-                'error'  => $e->getMessage(),
-            ];
+            $aValid[] = $oField->key;
         }
 
-        return $aOut;
+        $aPost = $oInput->post();
+        foreach ($aPost as $sKey => $sValue) {
+            if (!in_array($sKey, $aValid)) {
+                $aInvalid[] = $sKey;
+            }
+        }
+
+        if (!empty($aInvalid)) {
+            throw new ApiException(
+                'The following arguments are invalid: ' . implode(', ', $aInvalid),
+                $oHttpCodes::STATUS_BAD_REQUEST
+            );
+        }
+
+        $iItemId = (int) $oUri->segment(4);
+        if ($iItemId) {
+            $oItem = $oItemModel->getById($iItemId);
+            if (empty($oItem)) {
+                throw new ApiException(
+                    'Item does not exist',
+                    $oHttpCodes::STATUS_NOT_FOUND
+                );
+            } elseif (!$oItemModel->update($iItemId, $aPost)) {
+                throw new ApiException(
+                    'Failed to update item. ' . $oItemModel->lastError(),
+                    $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+                );
+            } elseif (classUses($oItemModel, 'Nails\Common\Traits\Caching')) {
+                $oItemModel->disableCache();
+            }
+            $oItem = $oItemModel->getById($iItemId);
+            if (classUses($oItemModel, 'Nails\Common\Traits\Caching')) {
+                $oItemModel->enableCache();
+            }
+        } else {
+            $oItem = $oItemModel->create($aPost, true);
+        }
+
+        $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+        $oResponse->setData($this->formatObject($oItem));
+        return $oResponse;
     }
 
     // --------------------------------------------------------------------------

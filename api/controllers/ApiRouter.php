@@ -10,6 +10,8 @@
  * @link
  */
 
+use Nails\Api\Exception\ApiException;
+use Nails\Api\Factory\ApiResponse;
 use Nails\Environment;
 use Nails\Factory;
 
@@ -32,6 +34,27 @@ if (class_exists('\App\Api\Controller\BaseRouter')) {
 
 class ApiRouter extends BaseMiddle
 {
+    const VALID_FORMATS = [
+        'TXT',
+        'JSON',
+    ];
+    const ACCESS_CONTROL_ALLOW_ORIGIN  = '*';
+    const ACCESS_CONTROL_ALLOW_HEADERS = [
+        'X-Access-Token',
+        'content',
+        'origin',
+        'content-type'
+    ];
+    const ACCESS_CONTROL_ALLOW_METHODS = [
+        'GET',
+        'PUT',
+        'POST',
+        'DELETE',
+        'OPTIONS'
+    ];
+
+    // --------------------------------------------------------------------------
+
     private $sRequestMethod;
     private $sModuleName;
     private $sClassName;
@@ -54,11 +77,7 @@ class ApiRouter extends BaseMiddle
         // --------------------------------------------------------------------------
 
         //  Set defaults
-        $this->aOutputValidFormats = [
-            'TXT',
-            'JSON',
-        ];
-        $this->bOutputSendHeader   = true;
+        $this->bOutputSendHeader = true;
 
         // --------------------------------------------------------------------------
 
@@ -73,18 +92,17 @@ class ApiRouter extends BaseMiddle
          * it's easier to regex that quickly, remove it, then split up the segments.
          */
 
-        $uriString = uri_string();
+        $sUri = uri_string();
 
         //  Get the format, if any
-        $formatPattern = '/\.([a-z]*)$/';
-        preg_match($formatPattern, $uriString, $matches);
+        $sPattern = '/\.([a-z]*)$/';
+        preg_match($sPattern, $sUri, $matches);
 
         if (!empty($matches[1])) {
 
-            $this->sOutputFormat = strtoupper($matches[1]);
-
             //  Remove the format from the string
-            $uriString = preg_replace($formatPattern, '', $uriString);
+            $this->sOutputFormat = strtoupper($matches[1]);
+            $sUri                = preg_replace($sPattern, '', $sUri);
 
         } else {
             $this->sOutputFormat = 'JSON';
@@ -92,21 +110,21 @@ class ApiRouter extends BaseMiddle
 
         //  Remove the module prefix (i.e "api/") then explode into segments
         //  Using regex as some systems will report a leading slash (e.g CLI)
-        $uriString = preg_replace('#/?api/#', '', $uriString);
-        $uriArray  = explode('/', $uriString);
+        $sUri = preg_replace('#/?api/#', '', $sUri);
+        $aUri = explode('/', $sUri);
 
         //  Work out the sModuleName, sClassName and method
-        $this->sModuleName = getFromArray(0, $uriArray, null);
-        $this->sClassName  = ucfirst(getFromArray(1, $uriArray, $this->sModuleName));
-        $this->sMethod     = getFromArray(2, $uriArray, 'index');
+        $this->sModuleName = getFromArray(0, $aUri, null);
+        $this->sClassName  = ucfirst(getFromArray(1, $aUri, $this->sModuleName));
+        $this->sMethod     = getFromArray(2, $aUri, 'index');
 
         //  What's left of the array are the parameters to pass to the method
-        $this->aParams = array_slice($uriArray, 3);
+        $this->aParams = array_slice($aUri, 3);
 
         //  Configure logging
-        $oDateTime     = Factory::factory('DateTime');
+        $oNow          = Factory::factory('DateTime');
         $this->oLogger = Factory::service('Logger');
-        $this->oLogger->setFile('api-' . $oDateTime->format('y-m-d') . '.php');
+        $this->oLogger->setFile('api-' . $oNow->format('y-m-d') . '.php');
     }
 
     // --------------------------------------------------------------------------
@@ -120,205 +138,201 @@ class ApiRouter extends BaseMiddle
         //  Handle OPTIONS CORS pre-flight requests
         if ($this->sRequestMethod === 'OPTIONS') {
 
-            header('Access-Control-Allow-Origin: *');
-            header('Access-Control-Allow-Headers: x-access-token, content, origin, content-type');
-            header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
-            exit;
+            $oOutput = Factory::service('Output');
+            $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
+            $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
+            $oOutput->set_header('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS));
+            return;
 
         } else {
 
-            /**
-             * If an access token has been passed then verify it
-             *
-             * Passing the token via the header is preferred, but fallback to the GET
-             * and POST arrays.
-             */
+            try {
+                /**
+                 * If an access token has been passed then verify it
+                 *
+                 * Passing the token via the header is preferred, but fallback to the GET
+                 * and POST arrays.
+                 */
 
-            $oInput                = Factory::service('Input');
-            $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
-            $accessToken           = $oInput->header('X-Access-Token');
+                $oInput                = Factory::service('Input');
+                $oHttpCodes            = Factory::service('HttpCodes');
+                $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
+                $sAccessToken          = $oInput->header('X-Access-Token');
 
-            if (!$accessToken) {
-                $accessToken = $oInput->post('accessToken');
-            }
-
-            if (!$accessToken) {
-                $accessToken = $oInput->get('accessToken');
-            }
-
-            if ($accessToken) {
-
-                $accessToken = $oUserAccessTokenModel->getByValidToken($accessToken);
-
-                if ($accessToken) {
-                    $oUserModel = Factory::model('User', 'nailsapp/module-auth');
-                    $oUserModel->setLoginData($accessToken->user_id, false);
+                if (!$sAccessToken) {
+                    $sAccessToken = $oInput->post('accessToken');
                 }
-            }
 
-            // --------------------------------------------------------------------------
+                if (!$sAccessToken) {
+                    $sAccessToken = $oInput->get('accessToken');
+                }
 
-            $aOut = [];
+                if ($sAccessToken) {
+                    $oAccessToken = $oUserAccessTokenModel->getByValidToken($sAccessToken);
+                    if ($oAccessToken) {
+                        $oUserModel = Factory::model('User', 'nailsapp/module-auth');
+                        $oUserModel->setLoginData($oAccessToken->user_id, false);
+                    } else {
+                        throw new ApiException(
+                            'Invalid access token',
+                            $oHttpCodes::STATUS_UNAUTHORIZED
+                        );
+                    }
+                }
 
-            if ($this->outputSetFormat($this->sOutputFormat)) {
+                // --------------------------------------------------------------------------
+
+                if (!$this->outputSetFormat($this->sOutputFormat)) {
+                    throw new ApiException(
+                        '"' . $this->sOutputFormat . '" is not a valid format.',
+                        $oHttpCodes::STATUS_BAD_REQUEST
+                    );
+                }
+
+                // --------------------------------------------------------------------------
+                //  Removed from here
+                // --------------------------------------------------------------------------
+
+                //  Register API modules
+                $aNamespaces = [];
+                foreach (_NAILS_GET_MODULES() as $oModule) {
+                    if (!empty($oModule->data->{'nailsapp/module-api'}->namespace)) {
+                        $sNamespace = $oModule->data->{'nailsapp/module-api'}->namespace;
+                        if (array_key_exists($sNamespace, $aNamespaces)) {
+                            throw new \Exception(
+                                'Conflicting API namespace "' . $sNamespace . '" in use by ' .
+                                '"' . $oModule->slug . '" and "' . $aNamespaces[$sNamespace]->slug . '"'
+                            );
+                        }
+                        $aNamespaces[$sNamespace] = $oModule;
+                    }
+                }
+
+                $i404Status = $oHttpCodes::STATUS_NOT_FOUND;
+                $s404Error  = '"' . strtolower($this->sModuleName . '/' . $this->sClassName . '/' . $this->sMethod) . '" is not a valid API route.';
+
+                if (!array_key_exists($this->sModuleName, $aNamespaces)) {
+                    throw new ApiException($s404Error, $i404Status);
+                }
+
+                $sController = $aNamespaces[$this->sModuleName]->namespace . 'Api\\Controller\\' . $this->sClassName;
+
+                if (!class_exists($sController)) {
+                    throw new ApiException($s404Error, $i404Status);
+                }
+
+                $mAuth = $sController::isAuthenticated($this->sRequestMethod, $this->sMethod);
+
+                if ($mAuth !== true) {
+                    throw new ApiException(
+                        getFromArray('error', $mAuth, $oHttpCodes::getByCode($oHttpCodes::STATUS_UNAUTHORIZED)),
+                        (int) getFromArray('status', $mAuth, $oHttpCodes::STATUS_UNAUTHORIZED)
+                    );
+                }
+
+                if (!empty($sController::REQUIRE_SCOPE)) {
+                    if (!$oUserAccessTokenModel->hasScope($oAccessToken, $sController::REQUIRE_SCOPE)) {
+                        throw new ApiException(
+                            'Access token with "' . $sController::REQUIRE_SCOPE . '" scope is required.',
+                            $oHttpCodes::STATUS_UNAUTHORIZED
+                        );
+                    }
+                }
+
+                //  New instance of the controller
+                $oInstance = new $sController($this);
 
                 /**
-                 * Look for a controller, app version first then the first one we
-                 * find in the modules.
+                 * We need to look for the appropriate method; we'll look in the following order:
+                 *
+                 * - {sRequestMethod}Remap()
+                 * - {sRequestMethod}{method}()
+                 * - anyRemap()
+                 * - any{method}()
+                 *
+                 * The second parameter is whether the method is a remap method or not.
                  */
-                $controllerPaths = [
-                    APPPATH . 'modules/api/controllers/',
+                $bDidFindRoute = false;
+                $aMethods      = [
+                    [
+                        strtolower($this->sRequestMethod) . 'Remap',
+                        true,
+                    ],
+                    [
+                        strtolower($this->sRequestMethod) . ucfirst($this->sMethod),
+                        false,
+                    ],
+                    [
+                        'anyRemap',
+                        true,
+                    ],
+                    [
+                        'any' . ucfirst($this->sMethod),
+                        false,
+                    ],
                 ];
 
-                $nailsModules        = _NAILS_GET_MODULES();
-                $sOriginalController = $this->sClassName;
+                foreach ($aMethods as $aMethodName) {
 
-                foreach ($nailsModules as $module) {
-                    if (!empty($module->data->{"nailsapp/module-api"}->{"controller-map"})) {
-                        $aMap             = (array) $module->data->{"nailsapp/module-api"}->{"controller-map"};
-                        $this->sClassName = getFromArray($this->sClassName, $aMap, $this->sClassName);
+                    $sMethod  = getFromArray(0, $aMethodName);
+                    $bIsRemap = (bool) getFromArray(1, $aMethodName);
+
+                    if (is_callable([$oInstance, $sMethod])) {
+
+                        $bDidFindRoute = true;
 
                         /**
-                         * This prevents users from accessing the "correct" controller,
-                         * so we only have one valid route
+                         * If the method we're trying to call is a remap method, then the first
+                         * param should be the name of the method being called
                          */
-                        $sRemapped = array_search($sOriginalController, $aMap);
-                        if ($sRemapped !== false) {
-                            $this->sClassName = $sRemapped;
+                        if ($bIsRemap) {
+                            $aParams = array_merge([$this->sMethod], $this->aParams);
+                        } else {
+                            $aParams = $this->aParams;
                         }
-                    }
-                    $controllerPaths[] = $module->path . 'api/controllers/';
-                }
 
-                //  Look for a valid controller
-                $controllerName = ucfirst($this->sClassName) . '.php';
-
-                foreach ($controllerPaths as $path) {
-
-                    $fullPath = $path . $controllerName;
-                    if (fileExistsCS($fullPath)) {
-                        $controllerPath = $fullPath;
+                        $oResponse = call_user_func_array([$oInstance, $sMethod], $aParams);
                         break;
                     }
                 }
 
-                if (!empty($controllerPath)) {
-
-                    //  Load the file and try and execute the method
-                    require_once $controllerPath;
-
-                    $this->sModuleName = 'Nails\\Api\\' . ucfirst($this->sModuleName) . '\\' . ucfirst($this->sClassName);
-
-                    if (class_exists($this->sModuleName)) {
-
-                        $sClassName = $this->sModuleName;
-                        $mAuth      = $sClassName::isAuthenticated($this->sRequestMethod, $this->sMethod);
-                        if ($mAuth !== true) {
-                            $oHttpCodes     = Factory::service('HttpCodes');
-                            $aOut['status'] = !empty($mAuth['status']) ? $mAuth['status'] : 401;
-                            $aOut['error']  = !empty($mAuth['error']) ? $mAuth['error'] : $oHttpCodes::STATUS_401;
-                        }
-
-                        /**
-                         * If no errors and a scope is required, check the scope
-                         */
-                        if (empty($aOut) && !empty($sClassName::$requiresScope)) {
-                            if (!$oUserAccessTokenModel->hasScope($accessToken, $sClassName::$requiresScope)) {
-                                $aOut['status'] = 401;
-                                $aOut['error']  = 'Access token with "' . $sClassName::$requiresScope;
-                                $aOut['error']  .= '" scope is required.';
-                            }
-                        }
-
-                        /**
-                         * If no errors so far, begin execution
-                         */
-                        if (empty($aOut)) {
-
-                            //  New instance of the controller
-                            $instance = new $this->sModuleName($this);
-
-                            /**
-                             * We need to look for the appropriate method; we'll look in the following order:
-                             *
-                             * - {sRequestMethod}Remap()
-                             * - {sRequestMethod}{method}()
-                             * - anyRemap()
-                             * - any{method}()
-                             *
-                             * The second parameter is whether the method is a remap method or not.
-                             */
-
-                            $aMethods = [
-                                [
-                                    strtolower($this->sRequestMethod) . 'Remap',
-                                    true,
-                                ],
-                                [
-                                    strtolower($this->sRequestMethod) . ucfirst($this->sMethod),
-                                    false,
-                                ],
-                                [
-                                    'anyRemap',
-                                    true,
-                                ],
-                                [
-                                    'any' . ucfirst($this->sMethod),
-                                    false,
-                                ],
-                            ];
-
-                            $bDidFindRoute = false;
-
-                            foreach ($aMethods as $aMethodName) {
-
-                                if (is_callable([$instance, $aMethodName[0]])) {
-
-                                    /**
-                                     * If the method we're trying to call is a remap method, then the first
-                                     * param should be the name of the method being called
-                                     */
-
-                                    if ($aMethodName[1]) {
-                                        $aParams = array_merge([$this->sMethod], $this->aParams);
-                                    } else {
-                                        $aParams = $this->aParams;
-                                    }
-
-                                    $bDidFindRoute = true;
-                                    $aOut          = call_user_func_array([$instance, $aMethodName[0]], $aParams);
-                                    break;
-                                }
-                            }
-
-                            if (!$bDidFindRoute) {
-                                $aOut['status'] = 404;
-                                $aOut['error']  = '"' . $this->sRequestMethod . ': ' . $this->sModuleName . '/';
-                                $aOut['error']  .= $this->sClassName . '/' . $this->sMethod;
-                                $aOut['error']  .= '" is not a valid API route.';
-                            }
-                        }
-
-                    } else {
-
-                        $aOut['status'] = 500;
-                        $aOut['error']  = '"' . $this->sModuleName . '" is incorrectly configured; class does not exist.';
-                        $this->writeLog($aOut['error']);
-                    }
-
-                } else {
-
-                    $aOut['status'] = 404;
-                    $aOut['error']  = '"' . $this->sModuleName . '/' . $this->sMethod . '" is not a valid API route.';
-                    $this->writeLog($aOut['error']);
+                if (!$bDidFindRoute) {
+                    throw new ApiException(
+                        '"' . $this->sRequestMethod . ': ' . $this->sModuleName . '/' . $this->sClassName . '/' . $this->sMethod . '" is not a valid API route.',
+                        $oHttpCodes::STATUS_NOT_FOUND
+                    );
                 }
 
-            } else {
+                if (!($oResponse instanceof ApiResponse)) {
+                    //  This is a misconfiguration error, which we want to bubble up to the error handler
+                    throw new \Exception(
+                        'Return object must be an instance of \Nails\Api\Factory\ApiResponse',
+                        $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+                    );
+                }
 
-                $aOut['status'] = 400;
-                $aOut['error']  = '"' . $this->sOutputFormat . '" is not a valid format.';
-                $this->writeLog($aOut['error']);
-                $this->sOutputFormat = 'JSON';
+                $aOut = [
+                    'status' => $oHttpCodes::STATUS_OK,
+                    'data'   => $oResponse->getData(),
+                    'meta'   => $oResponse->getMeta(),
+                ];
+
+            } catch (ApiException $e) {
+                $aOut = [
+                    'status' => $e->getCode() ?: 500,
+                    'error'  => $e->getMessage() ?: 'An unkown error occurred',
+                ];
+                if (isSuperuser()) {
+                    $aOut['exception'] = (object) array_filter([
+                        'type'          => get_class($e),
+                        'file'          => $e->getFile(),
+                        'line'          => $e->getLine(),
+                        'documentation' => $e->getDocumentationUrl(),
+                        'trace'         => $e->getTrace(),
+                    ]);
+                }
+
+                $this->writeLog($aOut);
             }
 
             $this->output($aOut);
@@ -336,8 +350,9 @@ class ApiRouter extends BaseMiddle
      */
     protected function output($aOut = [])
     {
-        $oInput  = Factory::service('Input');
-        $oOutput = Factory::service('Output');
+        $oInput     = Factory::service('Input');
+        $oOutput    = Factory::service('Output');
+        $oHttpCodes = Factory::service('HttpCodes');
 
         //  Set cache headers
         $oOutput->set_header('Cache-Control: no-store, no-cache, must-revalidate');
@@ -345,43 +360,18 @@ class ApiRouter extends BaseMiddle
         $oOutput->set_header('Pragma: no-cache');
 
         //  Set access control headers
-        $oOutput->set_header('Access-Control-Allow-Origin: *');
-        $oOutput->set_header('Access-Control-Allow-Headers: x-access-token, content, origin, content-type');
-        $oOutput->set_header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
-
-        $sServerProtocol = $oInput->server('SERVER_PROTOCOL');
+        $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
+        $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
+        $oOutput->set_header('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS));
 
         // --------------------------------------------------------------------------
 
         //  Send the correct status header, default to 200 OK
-        $oHttpCodes = Factory::service('HttpCodes');
-
-        if (isset($aOut['status'])) {
-
-            $aOut['status'] = (int) $aOut['status'];
-            $sHttpCode      = $aOut['status'];
-            $sHttpString    = $oHttpCodes->getByCode($aOut['status']);
-
-            if (empty($sHttpString)) {
-                $aOut['status'] = 200;
-                $sHttpCode      = $aOut['status'];
-                $sHttpString    = $oHttpCodes->getByCode($aOut['status']);
-            }
-
-        } elseif (is_array($aOut)) {
-
-            $aOut['status'] = 200;
-            $sHttpCode      = $aOut['status'];
-            $sHttpString    = $oHttpCodes->getByCode($aOut['status']);
-
-        } else {
-
-            $sHttpCode   = 200;
-            $sHttpString = $oHttpCodes::STATUS_200;
-        }
-
         if ($this->bOutputSendHeader) {
-            $oOutput->set_header($sServerProtocol . ' ' . $sHttpCode . ' ' . $sHttpString);
+            $sProtocol   = $oInput->server('SERVER_PROTOCOL');
+            $iHttpCode   = getFromArray('status', $aOut, $oHttpCodes::STATUS_OK);
+            $sHttpString = $oHttpCodes::getByCode($iHttpCode);
+            $oOutput->set_header($sProtocol . ' ' . $iHttpCode . ' ' . $sHttpString);
         }
 
         // --------------------------------------------------------------------------
@@ -389,15 +379,15 @@ class ApiRouter extends BaseMiddle
         //  Output content
         switch ($this->sOutputFormat) {
             case 'TXT':
-                $aOut = $this->outputTxt($aOut);
+                $sOut = $this->outputTxt($aOut);
                 break;
 
             case 'JSON':
-                $aOut = $this->outputJson($aOut);
+                $sOut = $this->outputJson($aOut);
                 break;
         }
 
-        $oOutput->set_output($aOut);
+        $oOutput->set_output($sOut);
     }
 
     // --------------------------------------------------------------------------
@@ -485,7 +475,7 @@ class ApiRouter extends BaseMiddle
      */
     private function isValidFormat($sFormat)
     {
-        return in_array(strtoupper($sFormat), $this->aOutputValidFormats);
+        return in_array(strtoupper($sFormat), static::VALID_FORMATS);
     }
 
     // --------------------------------------------------------------------------
@@ -497,6 +487,9 @@ class ApiRouter extends BaseMiddle
      */
     public function writeLog($sLine)
     {
+        if (!is_string($sLine)) {
+            $sLine = print_r($sLine, true);
+        }
         $sLine = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
         $this->oLogger->line($sLine);
     }

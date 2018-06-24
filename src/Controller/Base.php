@@ -44,9 +44,17 @@ abstract class Base extends BaseMiddle
      */
     const REQUIRE_AUTH = false;
 
+    /**
+     * Require the user's access token to have a particular scope
+     */
+    const REQUIRE_SCOPE = null;
+
     // --------------------------------------------------------------------------
 
-    protected $data;
+    /**
+     * The Api Router instance
+     * @var \ApiRouter
+     */
     protected $oApiRouter;
 
     // --------------------------------------------------------------------------
@@ -66,7 +74,6 @@ abstract class Base extends BaseMiddle
 
         // --------------------------------------------------------------------------
 
-        $this->data       =& getControllerData();
         $this->oApiRouter = $oApiRouter;
 
         // --------------------------------------------------------------------------
@@ -78,25 +85,9 @@ abstract class Base extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
-     * Common method
-     * @param  string $method the method which was not found
-     * @return array
-     */
-    protected function methodNotFound($method)
-    {
-        $this->writeLog('"' . $method . '" is not a valid API route.');
-
-         return array(
-            'status' => 404,
-            'error'  => '"' . $method . '" is not a valid API route.'
-         );
-    }
-
-    // --------------------------------------------------------------------------
-
-    /**
      * Writes a line to the log
-     * @param string $sLine the line to write
+     *
+     * @param string $sLine The line to write
      */
     protected function writeLog($sLine)
     {
@@ -107,10 +98,12 @@ abstract class Base extends BaseMiddle
 
     /**
      * Whether the user is authenticated.
+     *
      * @param  string $sHttpMethod The HTTP Method protocol being used
-     * @param  string $sMethod     The controller method to execute
-     * @return mixed               Boolean true or false. Can also return an array
-     *                             where the two elements (status and error) which
+     * @param  string $sMethod     The controller method being executed
+     *
+     * @return boolean/array       Boolean true or false. Can also return an array
+     *                             with two elements (status and error) which
      *                             will customise the response code and message.
      */
     public static function isAuthenticated($sHttpMethod = '', $sMethod = '')
