@@ -188,7 +188,11 @@ class ApiRouter extends BaseMiddle
                 // --------------------------------------------------------------------------
 
                 //  Register API modules
-                $aNamespaces = [];
+                $aNamespaces = [
+                    'app' => (object) [
+                        'namespace' => 'App\\'
+                    ],
+                ];
                 foreach (_NAILS_GET_MODULES() as $oModule) {
                     if (!empty($oModule->data->{'nailsapp/module-api'}->namespace)) {
                         $sNamespace = $oModule->data->{'nailsapp/module-api'}->namespace;
@@ -209,7 +213,7 @@ class ApiRouter extends BaseMiddle
                     throw new ApiException($s404Error, $i404Status);
                 }
 
-                $oNamespace          = $aNamespaces[$sNamespace];
+                $oNamespace          = $aNamespaces[$this->sModuleName];
                 $sOriginalController = $this->sClassName;
 
                 //  Do we need to remap the controller?
@@ -225,7 +229,7 @@ class ApiRouter extends BaseMiddle
                     }
                 }
 
-                $sController = $aNamespaces[$this->sModuleName]->namespace . 'Api\\Controller\\' . $this->sClassName;
+                $sController = $oNamespace->namespace . 'Api\\Controller\\' . $this->sClassName;
 
                 if (!class_exists($sController)) {
                     throw new ApiException($s404Error, $i404Status);
