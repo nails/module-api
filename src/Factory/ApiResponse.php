@@ -30,11 +30,15 @@ class ApiResponse
 
     /**
      * Set the response payload
+     *
      * @param $mData
+     *
+     * @return $this
      */
     public function setData($mData)
     {
         $this->mData = $mData;
+        return $this;
     }
 
     // --------------------------------------------------------------------------
@@ -52,11 +56,15 @@ class ApiResponse
 
     /**
      * Set the response meta
+     *
      * @param array $aMeta
+     *
+     * @return $this
      */
     public function setMeta(array $aMeta)
     {
-        $this->mMeta = $aMeta;
+        $this->aMeta = $aMeta;
+        return $this;
     }
 
     // --------------------------------------------------------------------------
