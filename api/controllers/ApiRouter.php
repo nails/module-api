@@ -34,7 +34,7 @@ if (class_exists('\App\Api\Controller\BaseRouter')) {
 
 class ApiRouter extends BaseMiddle
 {
-    const VALID_FORMATS = [
+    const VALID_FORMATS                = [
         'TXT',
         'JSON',
     ];
@@ -43,15 +43,16 @@ class ApiRouter extends BaseMiddle
         'X-Access-Token',
         'content',
         'origin',
-        'content-type'
+        'content-type',
     ];
     const ACCESS_CONTROL_ALLOW_METHODS = [
         'GET',
         'PUT',
         'POST',
         'DELETE',
-        'OPTIONS'
+        'OPTIONS',
     ];
+    const OUTPUT_FORMAT_PATTERN        = '/\.([a-z]*)$/';
 
     // --------------------------------------------------------------------------
 
@@ -92,21 +93,8 @@ class ApiRouter extends BaseMiddle
          * it's easier to regex that quickly, remove it, then split up the segments.
          */
 
-        $sUri = uri_string();
-
-        //  Get the format, if any
-        $sPattern = '/\.([a-z]*)$/';
-        preg_match($sPattern, $sUri, $matches);
-
-        if (!empty($matches[1])) {
-
-            //  Remove the format from the string
-            $this->sOutputFormat = strtoupper($matches[1]);
-            $sUri                = preg_replace($sPattern, '', $sUri);
-
-        } else {
-            $this->sOutputFormat = 'JSON';
-        }
+        $this->sOutputFormat = static::getOutputFormat();
+        $sUri                = preg_replace(static::OUTPUT_FORMAT_PATTERN, '', uri_string());
 
         //  Remove the module prefix (i.e "api/") then explode into segments
         //  Using regex as some systems will report a leading slash (e.g CLI)
@@ -125,6 +113,14 @@ class ApiRouter extends BaseMiddle
         $oNow          = Factory::factory('DateTime');
         $this->oLogger = Factory::service('Logger');
         $this->oLogger->setFile('api-' . $oNow->format('y-m-d') . '.php');
+    }
+
+    // --------------------------------------------------------------------------
+
+    public static function getOutputFormat()
+    {
+        preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
+        return !empty($aMatches[1]) ? strtoupper($aMatches[1]) : 'JSON';
     }
 
     // --------------------------------------------------------------------------
@@ -190,8 +186,6 @@ class ApiRouter extends BaseMiddle
                 }
 
                 // --------------------------------------------------------------------------
-                //  Removed from here
-                // --------------------------------------------------------------------------
 
                 //  Register API modules
                 $aNamespaces = [];
@@ -215,6 +209,22 @@ class ApiRouter extends BaseMiddle
                     throw new ApiException($s404Error, $i404Status);
                 }
 
+                $oNamespace          = $aNamespaces[$sNamespace];
+                $sOriginalController = $this->sClassName;
+
+                //  Do we need to remap the controller?
+                if (!empty($oNamespace->data->{'nailsapp/module-api'}->{'controller-map'})) {
+
+                    $aMap             = (array) $oNamespace->data->{'nailsapp/module-api'}->{'controller-map'};
+                    $this->sClassName = getFromArray($this->sClassName, $aMap, $this->sClassName);
+
+                    //  This prevents users from accessing the "correct" controller, so we only have one valid route
+                    $sRemapped = array_search($sOriginalController, $aMap);
+                    if ($sRemapped !== false) {
+                        $this->sClassName = $sRemapped;
+                    }
+                }
+
                 $sController = $aNamespaces[$this->sModuleName]->namespace . 'Api\\Controller\\' . $this->sClassName;
 
                 if (!class_exists($sController)) {
@@ -222,12 +232,17 @@ class ApiRouter extends BaseMiddle
                 }
 
                 $mAuth = $sController::isAuthenticated($this->sRequestMethod, $this->sMethod);
-
                 if ($mAuth !== true) {
-                    throw new ApiException(
-                        getFromArray('error', $mAuth, $oHttpCodes::getByCode($oHttpCodes::STATUS_UNAUTHORIZED)),
-                        (int) getFromArray('status', $mAuth, $oHttpCodes::STATUS_UNAUTHORIZED)
-                    );
+
+                    if (is_array($mAuth)) {
+                        $sError  = getFromArray('error', $mAuth, $oHttpCodes::getByCode($oHttpCodes::STATUS_UNAUTHORIZED));
+                        $iStatus = (int) getFromArray('status', $mAuth, $oHttpCodes::STATUS_UNAUTHORIZED);
+                    } else {
+                        $sError  = 'You must be logged in to access this resource';
+                        $iStatus = $oHttpCodes::STATUS_UNAUTHORIZED;
+                    }
+
+                    throw new ApiException($sError, $iStatus);
                 }
 
                 if (!empty($sController::REQUIRE_SCOPE)) {
@@ -276,7 +291,6 @@ class ApiRouter extends BaseMiddle
 
                     $sMethod  = getFromArray(0, $aMethodName);
                     $bIsRemap = (bool) getFromArray(1, $aMethodName);
-
                     if (is_callable([$oInstance, $sMethod])) {
 
                         $bDidFindRoute = true;
@@ -318,21 +332,44 @@ class ApiRouter extends BaseMiddle
                 ];
 
             } catch (ApiException $e) {
+
                 $aOut = [
-                    'status' => $e->getCode() ?: 500,
+                    'status' => $e->getCode() ?: $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR,
                     'error'  => $e->getMessage() ?: 'An unkown error occurred',
                 ];
                 if (isSuperuser()) {
                     $aOut['exception'] = (object) array_filter([
-                        'type'          => get_class($e),
-                        'file'          => $e->getFile(),
-                        'line'          => $e->getLine(),
-                        'documentation' => $e->getDocumentationUrl(),
-                        'trace'         => $e->getTrace(),
+                        'type'  => get_class($e),
+                        'file'  => $e->getFile(),
+                        'line'  => $e->getLine(),
+                        'trace' => $e->getTrace(),
                     ]);
                 }
 
                 $this->writeLog($aOut);
+
+            } catch (\Exception $e) {
+                /**
+                 * When running in PRODUCTION we want the global error handler to catch exceptions so that they
+                 * can be handled proeprly and reported if necessary. In other environments we want to show the
+                 * developer the error quickly and with as much info as possible.
+                 */
+                if (Environment::is('PRODUCTION')) {
+                    throw $e;
+                } else {
+                    $aOut = [
+                        'status'    => $e->getCode() ?: $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR,
+                        'error'     => $e->getMessage() ?: 'An unkown error occurred',
+                        'exception' => (object) array_filter([
+                            'type'  => get_class($e),
+                            'file'  => $e->getFile(),
+                            'line'  => $e->getLine(),
+                            'trace' => $e->getTrace(),
+                        ]),
+                    ];
+
+                    $this->writeLog($aOut);
+                }
             }
 
             $this->output($aOut);
