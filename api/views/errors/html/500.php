@@ -1,11 +1,15 @@
 <?php
-if (class_exists('ApiRouter') && ApiRouter::getOutputFormat() === 'JSON') {
-    header('Content-Type: application/json');
+if (\Nails\Environment::is('PRODUCTION')) {
+    if (class_exists('ApiRouter') && ApiRouter::getOutputFormat() === 'JSON') {
+        header('Content-Type: application/json');
+    } else {
+        header('Content-Type: text/html');
+    }
+
+    echo json_encode([
+        'status' => 500,
+        'error'  => 'Sorry, an error occurred from which we could not recover. The technical team have been informed. We apologise for the inconvenience.',
+    ]);
 } else {
-    header('Content-Type: text/html');
-}
-?>
-{
-    "status": 500,
-    "error": "Sorry, an error occurred from which we could not recover. The technical team have been informed. We apologise for the inconvenience."
+    require NAILS_COMMON_PATH . 'views/errors/html/500.php';
 }
