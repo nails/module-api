@@ -346,7 +346,6 @@ class ApiRouter extends BaseMiddle
                         'type'  => get_class($e),
                         'file'  => $e->getFile(),
                         'line'  => $e->getLine(),
-                        'trace' => $e->getTrace(),
                     ]);
                 }
 
@@ -368,7 +367,6 @@ class ApiRouter extends BaseMiddle
                             'type'  => get_class($e),
                             'file'  => $e->getFile(),
                             'line'  => $e->getLine(),
-                            'trace' => $e->getTrace(),
                         ]),
                     ];
 
