@@ -20,6 +20,24 @@ class CrudController extends Base
      */
     const CONFIG_LOOKUP_METHOD = 'ID';
 
+    /**
+     * The $_GET parameter with the search query in it
+     * @var string
+     */
+    const CONFIG_SEARCH_PARAM = 'search';
+
+    /**
+     * The $_GET parameter with the page query in it
+     * @var integer
+     */
+    const CONFIG_PAGE_PARAM = 'page';
+
+    /**
+     * The number of items to return per page
+     * @var integer
+     */
+    const CONFIG_PER_PAGE = 25;
+
     // --------------------------------------------------------------------------
 
     /**
@@ -63,6 +81,8 @@ class CrudController extends Base
      */
     public function getRemap()
     {
+        //  @todo (Pablo - 2018-05-08) - Validate user can view resource
+
         $oUri       = Factory::service('Uri');
         $oHttpCodes = Factory::service('HttpCodes');
         if ($oUri->segment(4)) {
@@ -75,15 +95,44 @@ class CrudController extends Base
                 );
             }
 
-            //  @todo (Pablo - 2018-05-08) - Validate user can view resource
-
             $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
             $oResponse->setData($this->formatObject($oItem));
 
         } else {
-            //  @todo (Pablo - 2018-06-24) - Paging
-            $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
-            $oResponse->setData(array_map([$this, 'formatObject'], $this->oModel->getAll()));
+
+            $oInput = Factory::service('Input');
+            $aData  = [];
+
+            //  Paging
+            $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
+            $iPage = $iPage < 0 ? $iPage * -1 : $iPage;
+
+            //  Searching
+            if ($oInput->get(static::CONFIG_SEARCH_PARAM)) {
+                $aData['keywords'] = $oInput->get(static::CONFIG_SEARCH_PARAM);
+            }
+
+            $iTotal   = $this->oModel->countAll($aData);
+            $aResults = array_map(
+                [$this, 'formatObject'],
+                $this->oModel->getAll(
+                    $iPage,
+                    static::CONFIG_PER_PAGE,
+                    $aData
+                )
+            );
+
+            $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api')
+                                ->setData($aResults)
+                                ->setMeta([
+                                    'pagination' => [
+                                        'page'     => $iPage,
+                                        'per_page' => static::CONFIG_PER_PAGE,
+                                        'total'    => $iTotal,
+                                        'previous' => $this->buildUrl($iTotal, $iPage, -1),
+                                        'next'     => $this->buildUrl($iTotal, $iPage, 1),
+                                    ],
+                                ]);
         }
 
         return $oResponse;
@@ -205,6 +254,34 @@ class CrudController extends Base
                 break;
 
         }
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function buildUrl($iTotal, $iPage, $iOffset)
+    {
+        $aParams = [
+            'page' => $iPage + $iOffset,
+        ];
+
+        if ($aParams['page'] <= 0) {
+            return null;
+        } elseif ($aParams['page'] === 1) {
+            unset($aParams['page']);
+        }
+
+        $iTotalPages = ceil($iTotal / static::CONFIG_PER_PAGE);
+        if (!empty($aParams['page']) && $aParams['page'] > $iTotalPages) {
+            return null;
+        }
+
+        $sUrl = site_url() . uri_string();
+
+        if (!empty($aParams)) {
+            $sUrl .= '?' . http_build_query($aParams);
+        }
+
+        return $sUrl;
     }
 
     // --------------------------------------------------------------------------
