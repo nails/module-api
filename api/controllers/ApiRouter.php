@@ -34,6 +34,9 @@ if (class_exists('\App\Api\Controller\BaseRouter')) {
 
 class ApiRouter extends BaseMiddle
 {
+    const FORMAT_JSON                  = 'JSON';
+    const FORMAT_TXT                   = 'TXT';
+    const DEFAULT_FORMAT               = 'JSON';
     const VALID_FORMATS                = [
         'TXT',
         'JSON',
@@ -120,7 +123,8 @@ class ApiRouter extends BaseMiddle
     public static function getOutputFormat()
     {
         preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
-        return !empty($aMatches[1]) ? strtoupper($aMatches[1]) : 'JSON';
+        $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
+        return static::isValidFormat($sFormat) ? $sFormat : static::DEFAULT_FORMAT;
     }
 
     // --------------------------------------------------------------------------
@@ -190,7 +194,7 @@ class ApiRouter extends BaseMiddle
                 //  Register API modules
                 $aNamespaces = [
                     'app' => (object) [
-                        'namespace' => 'App\\'
+                        'namespace' => 'App\\',
                     ],
                 ];
                 foreach (_NAILS_GET_MODULES() as $oModule) {
@@ -343,9 +347,9 @@ class ApiRouter extends BaseMiddle
                 ];
                 if (isSuperuser()) {
                     $aOut['exception'] = (object) array_filter([
-                        'type'  => get_class($e),
-                        'file'  => $e->getFile(),
-                        'line'  => $e->getLine(),
+                        'type' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
                     ]);
                 }
 
@@ -364,9 +368,9 @@ class ApiRouter extends BaseMiddle
                         'status'    => $e->getCode() ?: $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR,
                         'error'     => $e->getMessage() ?: 'An unkown error occurred',
                         'exception' => (object) array_filter([
-                            'type'  => get_class($e),
-                            'file'  => $e->getFile(),
-                            'line'  => $e->getLine(),
+                            'type' => get_class($e),
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
                         ]),
                     ];
 
@@ -417,11 +421,11 @@ class ApiRouter extends BaseMiddle
 
         //  Output content
         switch ($this->sOutputFormat) {
-            case 'TXT':
+            case static::FORMAT_TXT:
                 $sOut = $this->outputTxt($aOut);
                 break;
 
-            case 'JSON':
+            case static::FORMAT_JSON:
                 $sOut = $this->outputJson($aOut);
                 break;
         }
@@ -475,14 +479,14 @@ class ApiRouter extends BaseMiddle
     /**
      * Sets the output format
      *
-     * @param  string $format The format to use
+     * @param  string $sFormat The format to use
      *
      * @return boolean
      */
-    public function outputSetFormat($format)
+    public function outputSetFormat($sFormat)
     {
-        if ($this->isValidFormat($format)) {
-            $this->sOutputFormat = strtoupper($format);
+        if (static::isValidFormat($sFormat)) {
+            $this->sOutputFormat = strtoupper($sFormat);
             return true;
         }
 
@@ -512,7 +516,7 @@ class ApiRouter extends BaseMiddle
      *
      * @return boolean
      */
-    private function isValidFormat($sFormat)
+    private static function isValidFormat($sFormat)
     {
         return in_array(strtoupper($sFormat), static::VALID_FORMATS);
     }
