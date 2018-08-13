@@ -44,6 +44,12 @@ class CrudController extends Base
      */
     const CONFIG_PER_PAGE = 25;
 
+    /**
+     * The default data array to use when looking up an item
+     * @var array
+     */
+    const CONFIG_LOOKUP_DATA = [];
+
     // --------------------------------------------------------------------------
 
     /**
@@ -107,7 +113,7 @@ class CrudController extends Base
         } else {
 
             $oInput = Factory::service('Input');
-            $aData  = [];
+            $aData  = static::CONFIG_LOOKUP_DATA_INDEX;
 
             //  Paging
             $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
@@ -255,15 +261,27 @@ class CrudController extends Base
         $oUri        = Factory::service('Uri');
         $sIdentifier = $oUri->segment(4);
 
+        //  Handle requests for expansions
+        $oInput      = Factory::service('Input');
+        $aData       = static::CONFIG_LOOKUP_DATA;
+        $aExpansions = array_filter((array) $oInput->get('expand'));
+        if ($aExpansions) {
+            if (!array_key_exists('expand', $aData)) {
+                $aData['expand'] = [];
+            }
+
+            $aData['expand'] = array_merge($aData['expand'], $aExpansions);
+        }
+
         switch (static::CONFIG_LOOKUP_METHOD) {
             case 'ID':
-                return $this->oModel->getById($sIdentifier);
+                return $this->oModel->getById($sIdentifier, $aData);
                 break;
             case 'SLUG':
-                return $this->oModel->getBySlug($sIdentifier);
+                return $this->oModel->getBySlug($sIdentifier, $aData);
                 break;
             case 'TOKEN':
-                return $this->oModel->getByToken($sIdentifier);
+                return $this->oModel->getByToken($sIdentifier, $aData);
                 break;
 
         }
