@@ -27,8 +27,14 @@ class CrudController extends Base
     const CONFIG_SEARCH_PARAM = 'search';
 
     /**
+     * The $_GET parameter with the ID restrictions in it
+     * @var strong
+     */
+    const CONFIG_IDS_PARAM = 'ids';
+
+    /**
      * The $_GET parameter with the page query in it
-     * @var integer
+     * @var string
      */
     const CONFIG_PAGE_PARAM = 'page';
 
@@ -110,6 +116,13 @@ class CrudController extends Base
             //  Searching
             if ($oInput->get(static::CONFIG_SEARCH_PARAM)) {
                 $aData['keywords'] = $oInput->get(static::CONFIG_SEARCH_PARAM);
+            }
+
+            // Requesting specific IDs
+            if ($oInput->get(static::CONFIG_IDS_PARAM)) {
+                $aData['where_in'] = [
+                    [$this->oModel->getcolumn('id'), explode(',', $oInput->get(static::CONFIG_IDS_PARAM))],
+                ];
             }
 
             $iTotal   = $this->oModel->countAll($aData);
