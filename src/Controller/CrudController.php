@@ -113,7 +113,7 @@ class CrudController extends Base
         } else {
 
             $oInput = Factory::service('Input');
-            $aData  = static::CONFIG_LOOKUP_DATA_INDEX;
+            $aData  = static::CONFIG_LOOKUP_DATA;
 
             //  Paging
             $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
