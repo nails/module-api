@@ -99,6 +99,12 @@ class CrudController extends Base
         $oHttpCodes = Factory::service('HttpCodes');
         if ($oUri->segment(4)) {
 
+            //  Test that there's not an explicit method defined for this
+            $sMethod = 'get' . ucfirst($oUri->segment(4));
+            if (method_exists($this, $sMethod)) {
+                return $this->$sMethod();
+            }
+
             $oItem = $this->lookUpResource();
             if (!$oItem) {
                 throw new ApiException(
@@ -197,6 +203,15 @@ class CrudController extends Base
      */
     public function putRemap()
     {
+        //  Test that there's not an explicit method defined for this action
+        $oUri    = Factory::service('Uri');
+        $sMethod = 'put' . ucfirst($oUri->segment(4));
+        if (method_exists($this, $sMethod)) {
+            return $this->$sMethod();
+        }
+
+        // --------------------------------------------------------------------------
+
         $oItem = $this->lookUpResource();
         if (!$oItem) {
             throw new ApiException('Resource not found', 404);
@@ -229,6 +244,15 @@ class CrudController extends Base
      */
     public function deleteRemap()
     {
+        //  Test that there's not an explicit method defined for this action
+        $oUri    = Factory::service('Uri');
+        $sMethod = 'put' . ucfirst($oUri->segment(4));
+        if (method_exists($this, $sMethod)) {
+            return $this->$sMethod();
+        }
+
+        // --------------------------------------------------------------------------
+
         $oHttpCodes = Factory::service('HttpCodes');
         $oItem      = $this->lookUpResource();
         if (!$oItem) {
