@@ -244,7 +244,6 @@ class CrudController extends Base
 
         $this->userCan(static::ACTION_UPDATE, $oItem);
 
-        $oInput     = Factory::service('Input');
         $oHttpCodes = Factory::service('HttpCodes');
 
         //  Read from php:://input as using PUT; expecting a JSONobject as the payload
