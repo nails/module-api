@@ -50,6 +50,33 @@ class CrudController extends Base
      */
     const CONFIG_LOOKUP_DATA = [];
 
+    /**
+     * Actions which can be performed
+     * @var string
+     */
+    const ACTION_CREATE = 'CREATE';
+    const ACTION_READ   = 'READ';
+    const ACTION_UPDATE = 'UPDATE';
+    const ACTION_DELETE = 'DELETE';
+
+    /**
+     * An array of fields which should be ignored when reading
+     * @var array
+     */
+    const IGNORE_FIELDS_READ = [
+        'id',
+        'token',
+    ];
+
+    /**
+     * An array of fields which should be ignored when writing
+     * @var array
+     */
+    const IGNORE_FIELDS_WRITE = [
+        'id',
+        'token',
+    ];
+
     // --------------------------------------------------------------------------
 
     /**
@@ -93,8 +120,6 @@ class CrudController extends Base
      */
     public function getRemap()
     {
-        //  @todo (Pablo - 2018-05-08) - Validate user can view resource
-
         $oUri       = Factory::service('Uri');
         $oHttpCodes = Factory::service('HttpCodes');
         if ($oUri->segment(4)) {
@@ -113,10 +138,14 @@ class CrudController extends Base
                 );
             }
 
+            $this->userCan(static::ACTION_READ, $oItem);
+
             $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
             $oResponse->setData($this->formatObject($oItem));
 
         } else {
+
+            $this->userCan(static::ACTION_READ);
 
             $oInput = Factory::service('Input');
             $aData  = static::CONFIG_LOOKUP_DATA;
@@ -171,17 +200,13 @@ class CrudController extends Base
      */
     public function postIndex()
     {
-
-        //  @todo (Pablo - 2018-05-08) - Validate user can create resource
-        //  @todo (Pablo - 2018-05-08) - Validate
-        //  @todo (Pablo - 2018-05-08) - Create
-        //  @todo (Pablo - 2018-05-08) - Extract fields safely
-
         $oInput     = Factory::service('Input');
         $oHttpCodes = Factory::service('HttpCodes');
-        $aData      = $oInput->post();
 
+        $this->userCan(static::ACTION_CREATE);
+        $aData = $this->validateUserInput($oInput->post());
         $oItem = $this->oModel->create($aData, true);
+
         if (empty($oItem)) {
             throw new ApiException(
                 'Failed to create resource. ' . $this->oModel->lastError(),
@@ -217,14 +242,15 @@ class CrudController extends Base
             throw new ApiException('Resource not found', 404);
         }
 
-        //  @todo (Pablo - 2018-05-08) - Validate user can update resource
-        //  @todo (Pablo - 2018-05-08) - Validate
-        //  @todo (Pablo - 2018-05-08) - Update
-        //  @todo (Pablo - 2018-05-08) - Extract fields safely
+        $this->userCan(static::ACTION_UPDATE, $oItem);
 
         $oInput     = Factory::service('Input');
         $oHttpCodes = Factory::service('HttpCodes');
-        $aData      = $oInput->post();
+
+        //  Read from php:://input as using PUT; expecting a JSONobject as the payload
+        $sData = stream_get_contents(fopen('php://input', 'r'));
+        $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
+        $aData = $this->validateUserInput($aData);
 
         if (!$this->oModel->update($oItem->id, $aData)) {
             throw new ApiException(
@@ -262,7 +288,7 @@ class CrudController extends Base
             );
         }
 
-        //  @todo (Pablo - 2018-05-08) - Validate user can delete resource
+        $this->userCan(static::ACTION_DELETE, $oItem);
 
         if (!$this->oModel->delete($oItem->id)) {
             throw new ApiException(
@@ -313,10 +339,65 @@ class CrudController extends Base
 
     // --------------------------------------------------------------------------
 
-    protected function buildUrl($iTotal, $iPage, $iOffset)
+    /**
+     * Validates a user can perform this action
+     *
+     * @param string    $sAction The action being performed
+     * @param \stdClass $oItem   The item the action is being performed against
+     *
+     * @throws ApiException
+     */
+    protected function userCan($sAction, $oItem = null)
+    {
+        //  By default users can perform any action, apply restrictions by overloading this method
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Validates user input
+     *
+     * @param array $aData The user data to validate
+     *
+     * @return array
+     * @throws ApiException;
+     */
+    protected function validateUserInput($aData)
+    {
+        $aOut       = [];
+        $aFields    = $this->oModel->describeFields();
+        $aValidKeys = array_diff(array_keys($aFields), static::IGNORE_FIELDS_WRITE);
+
+        foreach ($aValidKeys as $sValidKey) {
+
+            $oField = getFromArray($sValidKey, $aFields);
+            if (array_key_exists($sValidKey, $aData)) {
+                $aOut[$sValidKey] = getFromArray($sValidKey, $aData);
+            }
+
+            //  @todo (Pablo - 2018-08-20) - Further validation using the $oField->validation rules
+        }
+
+        //  @todo (Pablo - 2018-08-20) - Expandable fields
+
+        return $aOut;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Builds pagination URL
+     *
+     * @param integer $iTotal      The total number of items
+     * @param integer $iPage       The current page number
+     * @param integer $iPageOffset The offset to the page number
+     *
+     * @return null|string
+     */
+    protected function buildUrl($iTotal, $iPage, $iPageOffset)
     {
         $aParams = [
-            'page' => $iPage + $iOffset,
+            'page' => $iPage + $iPageOffset,
         ];
 
         if ($aParams['page'] <= 0) {
@@ -350,6 +431,9 @@ class CrudController extends Base
      */
     protected function formatObject($oObj)
     {
+        foreach (static::IGNORE_FIELDS_READ as $sIgnoredField) {
+            unset($oObj->{$sIgnoredField});
+        }
         return $oObj;
     }
 }
