@@ -63,10 +63,7 @@ class CrudController extends Base
      * An array of fields which should be ignored when reading
      * @var array
      */
-    const IGNORE_FIELDS_READ = [
-        'id',
-        'token',
-    ];
+    const IGNORE_FIELDS_READ = [];
 
     /**
      * An array of fields which should be ignored when writing
