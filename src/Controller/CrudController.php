@@ -363,9 +363,15 @@ class CrudController extends Base
      */
     protected function validateUserInput($aData)
     {
-        $aOut       = [];
-        $aFields    = $this->oModel->describeFields();
-        $aValidKeys = array_diff(array_keys($aFields), static::IGNORE_FIELDS_WRITE);
+        $aOut    = [];
+        $aFields = $this->oModel->describeFields();
+        $aKeys   = array_unique(
+            array_merge(
+                array_keys($aFields),
+                arrayExtractProperty($this->oModel->getExpandableFields(), 'trigger')
+            )
+        );
+        $aValidKeys = array_diff($aKeys, static::IGNORE_FIELDS_WRITE);
 
         foreach ($aValidKeys as $sValidKey) {
 
@@ -376,8 +382,6 @@ class CrudController extends Base
 
             //  @todo (Pablo - 2018-08-20) - Further validation using the $oField->validation rules
         }
-
-        //  @todo (Pablo - 2018-08-20) - Expandable fields
 
         return $aOut;
     }
