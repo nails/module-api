@@ -201,7 +201,18 @@ class CrudController extends Base
         $oHttpCodes = Factory::service('HttpCodes');
 
         $this->userCan(static::ACTION_CREATE);
-        $aData = $this->validateUserInput($oInput->post());
+
+        /**
+         * First check the $_POST superglobal, if that's empty then fall back to
+         * the body of the request assuming it is JSON.
+         */
+        $aData = $oInput->post();
+        if (empty($aData)) {
+            $sData = stream_get_contents(fopen('php://input', 'r'));
+            $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
+        }
+
+        $aData = $this->validateUserInput($aData);
         $oItem = $this->oModel->create($aData, true);
 
         if (empty($oItem)) {
@@ -243,7 +254,7 @@ class CrudController extends Base
 
         $oHttpCodes = Factory::service('HttpCodes');
 
-        //  Read from php:://input as using PUT; expecting a JSONobject as the payload
+        //  Read from php:://input when using PUT; expecting a JSON object as the payload
         $sData = stream_get_contents(fopen('php://input', 'r'));
         $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
         $aData = $this->validateUserInput($aData);
@@ -360,9 +371,9 @@ class CrudController extends Base
      */
     protected function validateUserInput($aData)
     {
-        $aOut    = [];
-        $aFields = $this->oModel->describeFields();
-        $aKeys   = array_unique(
+        $aOut       = [];
+        $aFields    = $this->oModel->describeFields();
+        $aKeys      = array_unique(
             array_merge(
                 array_keys($aFields),
                 arrayExtractProperty($this->oModel->getExpandableFields(), 'trigger')
