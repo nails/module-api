@@ -3,6 +3,8 @@
 namespace Nails\Api\Controller;
 
 use Nails\Api\Exception\ApiException;
+use Nails\Api\Factory\ApiResponse;
+use Nails\Common\Exception\FactoryException;
 use Nails\Factory;
 
 class CrudController extends Base
@@ -113,9 +115,15 @@ class CrudController extends Base
 
     /**
      * Handles GET requests
-     * @return array
+     *
+     * @param string $sMethod The method being called
+     * @param array  $aData   Any data to apply to the requests
+     *
+     * @return ApiResponse
+     * @throws ApiException
+     * @throws FactoryException
      */
-    public function getRemap()
+    public function getRemap($sMethod, array $aData = [])
     {
         $oUri       = Factory::service('Uri');
         $oHttpCodes = Factory::service('HttpCodes');
@@ -127,7 +135,7 @@ class CrudController extends Base
                 return $this->$sMethod();
             }
 
-            $oItem = $this->lookUpResource();
+            $oItem = $this->lookUpResource($aData);
             if (!$oItem) {
                 throw new ApiException(
                     'Resource not found',
@@ -145,7 +153,7 @@ class CrudController extends Base
             $this->userCan(static::ACTION_READ);
 
             $oInput = Factory::service('Input');
-            $aData  = static::CONFIG_LOOKUP_DATA;
+            $aData  = array_merge($aData, static::CONFIG_LOOKUP_DATA);
 
             //  Paging
             $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
@@ -212,15 +220,17 @@ class CrudController extends Base
             $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
         }
 
-        $aData = $this->validateUserInput($aData);
-        $oItem = $this->oModel->create($aData, true);
+        $aData   = $this->validateUserInput($aData);
+        $iItemId = $this->oModel->create($aData);
 
-        if (empty($oItem)) {
+        if (empty($iItemId)) {
             throw new ApiException(
                 'Failed to create resource. ' . $this->oModel->lastError(),
                 $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
             );
         }
+
+        $oItem = $this->oModel->getById($iItemId, static::CONFIG_LOOKUP_DATA);
 
         $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
         $oResponse->setData($this->formatObject($oItem));
@@ -232,9 +242,12 @@ class CrudController extends Base
 
     /**
      * Updates an existing resource
+     *
+     * @param string $sMethod The method being called
+     *
      * @return array
      */
-    public function putRemap()
+    public function putRemap($sMethod)
     {
         //  Test that there's not an explicit method defined for this action
         $oUri    = Factory::service('Uri');
@@ -254,7 +267,7 @@ class CrudController extends Base
 
         $oHttpCodes = Factory::service('HttpCodes');
 
-        //  Read from php:://input when using PUT; expecting a JSON object as the payload
+        //  Read from php:://input as using PUT; expecting a JSONobject as the payload
         $sData = stream_get_contents(fopen('php://input', 'r'));
         $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
         $aData = $this->validateUserInput($aData);
@@ -273,9 +286,12 @@ class CrudController extends Base
 
     /**
      * Deletes an existing resource
+     *
+     * @param string $sMethod The method being called
+     *
      * @return array
      */
-    public function deleteRemap()
+    public function deleteRemap($sMethod)
     {
         //  Test that there's not an explicit method defined for this action
         $oUri    = Factory::service('Uri');
@@ -311,16 +327,20 @@ class CrudController extends Base
 
     /**
      * Fetches an object by it's ID, SLUG, or TOKEN
+     *
+     * @param array $aData any data to pass to the lookup
+     *
      * @return \stdClass|false
+     * @throws FactoryException
      */
-    protected function lookUpResource()
+    protected function lookUpResource($aData = [])
     {
         $oUri        = Factory::service('Uri');
         $sIdentifier = $oUri->segment(4);
 
         //  Handle requests for expansions
         $oInput      = Factory::service('Input');
-        $aData       = static::CONFIG_LOOKUP_DATA;
+        $aData       = array_merge($aData, static::CONFIG_LOOKUP_DATA);
         $aExpansions = array_filter((array) $oInput->get('expand'));
         if ($aExpansions) {
             if (!array_key_exists('expand', $aData)) {
@@ -340,7 +360,6 @@ class CrudController extends Base
             case 'TOKEN':
                 return $this->oModel->getByToken($sIdentifier, $aData);
                 break;
-
         }
     }
 
