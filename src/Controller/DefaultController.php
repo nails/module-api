@@ -113,8 +113,9 @@ class DefaultController extends Base
      */
     public function getId($aData = [])
     {
-        $sIds   = '';
-        $oInput = Factory::service('Input');
+        $sIds       = '';
+        $oInput     = Factory::service('Input');
+        $oHttpCodes = Factory::service('HttpCodes');
 
         if (!empty($oInput->get('id'))) {
             $sIds = $oInput->get('id');
