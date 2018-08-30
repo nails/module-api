@@ -203,7 +203,13 @@ class DefaultController extends Base
      */
     public function postRemap()
     {
-        $oUri       = Factory::service('Uri');
+        $oUri = Factory::service('Uri');
+        //  Test that there's not an explicit method defined for this
+        $sMethod = 'post' . ucfirst($oUri->segment(4));
+        if (method_exists($this, $sMethod)) {
+            return $this->$sMethod();
+        }
+
         $oInput     = Factory::service('Input');
         $oHttpCodes = Factory::service('HttpCodes');
         $oItemModel = Factory::model(
