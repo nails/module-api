@@ -328,15 +328,16 @@ class CrudController extends Base
     /**
      * Fetches an object by it's ID, SLUG, or TOKEN
      *
-     * @param array $aData any data to pass to the lookup
+     * @param array   $aData    Any data to pass to the lookup
+     * @param integer $iSegment The segment containing the item's ID/Token/Slug
      *
      * @return \stdClass|false
      * @throws FactoryException
      */
-    protected function lookUpResource($aData = [])
+    protected function lookUpResource($aData = [], $iSegment = 4)
     {
         $oUri        = Factory::service('Uri');
-        $sIdentifier = $oUri->segment(4);
+        $sIdentifier = $oUri->segment($iSegment);
 
         //  Handle requests for expansions
         $oInput      = Factory::service('Input');
