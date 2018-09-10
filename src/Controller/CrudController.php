@@ -153,7 +153,7 @@ class CrudController extends Base
             $this->userCan(static::ACTION_READ);
 
             $oInput = Factory::service('Input');
-            $aData  = array_merge($aData, static::CONFIG_LOOKUP_DATA);
+            $aData  = array_merge(static::CONFIG_LOOKUP_DATA, $aData);
 
             //  Paging
             $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
@@ -340,7 +340,7 @@ class CrudController extends Base
 
         //  Handle requests for expansions
         $oInput      = Factory::service('Input');
-        $aData       = array_merge($aData, static::CONFIG_LOOKUP_DATA);
+        $aData       = array_merge(static::CONFIG_LOOKUP_DATA, $aData);
         $aExpansions = array_filter((array) $oInput->get('expand'));
         if ($aExpansions) {
             if (!array_key_exists('expand', $aData)) {
