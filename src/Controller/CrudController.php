@@ -270,7 +270,7 @@ class CrudController extends Base
         //  Read from php:://input as using PUT; expecting a JSONobject as the payload
         $sData = stream_get_contents(fopen('php://input', 'r'));
         $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
-        $aData = $this->validateUserInput($aData);
+        $aData = $this->validateUserInput($aData, $oItem);
 
         if (!$this->oModel->update($oItem->id, $aData)) {
             throw new ApiException(
@@ -384,12 +384,13 @@ class CrudController extends Base
     /**
      * Validates user input
      *
-     * @param array $aData The user data to validate
+     * @param array     $aData The user data to validate
+     * @param \stdClass $oItem The current object (when editing)
      *
      * @return array
      * @throws ApiException;
      */
-    protected function validateUserInput($aData)
+    protected function validateUserInput($aData, $oItem = null)
     {
         $aOut       = [];
         $aFields    = $this->oModel->describeFields();
