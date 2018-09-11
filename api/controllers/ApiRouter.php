@@ -12,6 +12,7 @@
 
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
+use Nails\Common\Exception\ValidationException;
 use Nails\Environment;
 use Nails\Factory;
 
@@ -333,11 +334,29 @@ class ApiRouter extends BaseMiddle
                     'meta'   => $oResponse->getMeta(),
                 ];
 
+            } catch (ValidationException $e) {
+
+                $aOut = [
+                    'status'  => $e->getCode() ?: $oHttpCodes::STATUS_BAD_REQUEST,
+                    'error'   => $e->getMessage() ?: 'An unkown validation error occurred',
+                    'details' => $e->getData() ?: [],
+                ];
+                if (isSuperuser()) {
+                    $aOut['exception'] = (object) array_filter([
+                        'type' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]);
+                }
+
+                $this->writeLog($aOut);
+
             } catch (ApiException $e) {
 
                 $aOut = [
-                    'status' => $e->getCode() ?: $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR,
-                    'error'  => $e->getMessage() ?: 'An unkown error occurred',
+                    'status'  => $e->getCode() ?: $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR,
+                    'error'   => $e->getMessage() ?: 'An unkown error occurred',
+                    'details' => $e->getData() ?: [],
                 ];
                 if (isSuperuser()) {
                     $aOut['exception'] = (object) array_filter([
