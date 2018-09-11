@@ -63,7 +63,6 @@ class ApiRouter extends BaseMiddle
     private $sModuleName;
     private $sClassName;
     private $sMethod;
-    private $aParams;
     private $aOutputValidFormats;
     private $sOutputFormat;
     private $bOutputSendHeader;
@@ -108,9 +107,6 @@ class ApiRouter extends BaseMiddle
         $this->sModuleName = getFromArray(0, $aUri, null);
         $this->sClassName  = ucfirst(getFromArray(1, $aUri, $this->sModuleName));
         $this->sMethod     = getFromArray(2, $aUri, 'index');
-
-        //  What's left of the array are the parameters to pass to the method
-        $this->aParams = array_slice($aUri, 3);
 
         //  Configure logging
         $oNow          = Factory::factory('DateTime');
@@ -308,12 +304,10 @@ class ApiRouter extends BaseMiddle
                          * param should be the name of the method being called
                          */
                         if ($bIsRemap) {
-                            $aParams = array_merge([$this->sMethod], $this->aParams);
+                            $oResponse = call_user_func_array([$oInstance, $sMethod], [$this->sMethod]);
                         } else {
-                            $aParams = $this->aParams;
+                            $oResponse = call_user_func_array([$oInstance, $sMethod]);
                         }
-
-                        $oResponse = call_user_func_array([$oInstance, $sMethod], $aParams);
                         break;
                     }
                 }
