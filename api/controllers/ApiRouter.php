@@ -307,7 +307,7 @@ class ApiRouter extends BaseMiddle
                         if ($bIsRemap) {
                             $oResponse = call_user_func_array([$oInstance, $sMethod], [$this->sMethod]);
                         } else {
-                            $oResponse = call_user_func_array([$oInstance, $sMethod]);
+                            $oResponse = call_user_func([$oInstance, $sMethod]);
                         }
                         break;
                     }
