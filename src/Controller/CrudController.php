@@ -145,7 +145,7 @@ class CrudController extends Base
 
             $this->userCan(static::ACTION_READ, $oItem);
 
-            $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+            $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
             $oResponse->setData($this->formatObject($oItem));
 
         } else {
@@ -181,7 +181,7 @@ class CrudController extends Base
                 )
             );
 
-            $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api')
+            $oResponse = Factory::factory('ApiResponse', 'nails/module-api')
                                 ->setData($aResults)
                                 ->setMeta([
                                     'pagination' => [
@@ -232,7 +232,7 @@ class CrudController extends Base
 
         $oItem = $this->oModel->getById($iItemId, static::CONFIG_LOOKUP_DATA);
 
-        $oResponse = Factory::factory('ApiResponse', 'nailsapp/module-api');
+        $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
         $oResponse->setData($this->formatObject($oItem));
 
         return $oResponse;
@@ -279,7 +279,7 @@ class CrudController extends Base
             );
         }
 
-        return Factory::factory('ApiResponse', 'nailsapp/module-api');
+        return Factory::factory('ApiResponse', 'nails/module-api');
     }
 
     // --------------------------------------------------------------------------
@@ -320,7 +320,7 @@ class CrudController extends Base
             );
         }
 
-        return Factory::factory('ApiResponse', 'nailsapp/module-api');
+        return Factory::factory('ApiResponse', 'nails/module-api');
     }
 
     // --------------------------------------------------------------------------

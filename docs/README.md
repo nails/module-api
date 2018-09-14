@@ -1,4 +1,4 @@
-# Docs for `nailsapp/module-api`
+# Docs for `nails/module-api`
 > Documentation is a WIP.
 
 

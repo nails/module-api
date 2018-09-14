@@ -1,5 +1,5 @@
 {
-    "name": "nailsapp/module-api",
+    "name": "nails/module-api",
     "keywords": ["Nails", "Shed Collective", "CodeIgniter", "API Module"],
     "homepage": "http://nailsapp.co.uk/modules/api",
     "description": "This is the \"API\" module for Nails.",
@@ -27,7 +27,7 @@
     "prefer-stable": true,
     "require":
     {
-        "nailsapp/common": "dev-develop"
+        "nails/common": "dev-develop"
     },
     "require-dev":
     {

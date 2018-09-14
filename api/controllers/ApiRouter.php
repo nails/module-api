@@ -153,7 +153,7 @@ class ApiRouter extends BaseMiddle
 
                 $oInput                = Factory::service('Input');
                 $oHttpCodes            = Factory::service('HttpCodes');
-                $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nailsapp/module-auth');
+                $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nails/module-auth');
                 $sAccessToken          = $oInput->header('X-Access-Token');
 
                 if (!$sAccessToken) {
@@ -167,7 +167,7 @@ class ApiRouter extends BaseMiddle
                 if ($sAccessToken) {
                     $oAccessToken = $oUserAccessTokenModel->getByValidToken($sAccessToken);
                     if ($oAccessToken) {
-                        $oUserModel = Factory::model('User', 'nailsapp/module-auth');
+                        $oUserModel = Factory::model('User', 'nails/module-auth');
                         $oUserModel->setLoginData($oAccessToken->user_id, false);
                     } else {
                         throw new ApiException(
@@ -195,8 +195,8 @@ class ApiRouter extends BaseMiddle
                     ],
                 ];
                 foreach (_NAILS_GET_MODULES() as $oModule) {
-                    if (!empty($oModule->data->{'nailsapp/module-api'}->namespace)) {
-                        $sNamespace = $oModule->data->{'nailsapp/module-api'}->namespace;
+                    if (!empty($oModule->data->{'nails/module-api'}->namespace)) {
+                        $sNamespace = $oModule->data->{'nails/module-api'}->namespace;
                         if (array_key_exists($sNamespace, $aNamespaces)) {
                             throw new \Exception(
                                 'Conflicting API namespace "' . $sNamespace . '" in use by ' .
@@ -218,9 +218,9 @@ class ApiRouter extends BaseMiddle
                 $sOriginalController = $this->sClassName;
 
                 //  Do we need to remap the controller?
-                if (!empty($oNamespace->data->{'nailsapp/module-api'}->{'controller-map'})) {
+                if (!empty($oNamespace->data->{'nails/module-api'}->{'controller-map'})) {
 
-                    $aMap             = (array) $oNamespace->data->{'nailsapp/module-api'}->{'controller-map'};
+                    $aMap             = (array) $oNamespace->data->{'nails/module-api'}->{'controller-map'};
                     $this->sClassName = getFromArray($this->sClassName, $aMap, $this->sClassName);
 
                     //  This prevents users from accessing the "correct" controller, so we only have one valid route

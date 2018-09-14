@@ -6,7 +6,7 @@
 
 > @todo - complete this
 
-Modules should register by specifying the `nailsapp/module-api.namespace` property in their `composer.json` file. This field is what the API will use to bind URLs to their controllers; e.g. setting this to `store` would expose the module's API controllers at `/api/store/{{controller}`.
+Modules should register by specifying the `nails/module-api.namespace` property in their `composer.json` file. This field is what the API will use to bind URLs to their controllers; e.g. setting this to `store` would expose the module's API controllers at `/api/store/{{controller}`.
 
 The app will always be given the `app` namespace.
 
@@ -22,7 +22,7 @@ Example `composer.json` file (with most fields redacted for berevity):
             "type": "module",
             "namespace": "Nails\\Store\\",
             "data": {
-                "nailsapp/module-api": {
+                "nails/module-api": {
                     "namespace": "store"
                 }
             }
@@ -50,7 +50,7 @@ class MyModel extends Base
 {
     public function getIndex()
     {
-        $oResponse = Factory::factory('ApiResponse', 'nailsapp/moduke-api');
+        $oResponse = Factory::factory('ApiResponse', 'nails/moduke-api');
         $oResponse-setData(['foo' => 'bar']);
         return $oResponse;
     }
@@ -131,14 +131,14 @@ In addition to these two constants, you can also set:
 
 By default, the URL maps to the controller class on disk, however there may be certain circumstances where you may wish to use a URL which does not map to the named file (e.g. if you wish to use a reserved word).
 
-This is achived by specifying the `controller-map` property in the module's `composer.json` file under the `nailsapp/module-api` namespace:
+This is achived by specifying the `controller-map` property in the module's `composer.json` file under the `nails/module-api` namespace:
 
 ```json
 {
   "extra": {
     "nails" : {
       "data": {
-        "nailsapp/module-api": {
+        "nails/module-api": {
           "controller-map": {
             "Object": "MyObject"
           }
