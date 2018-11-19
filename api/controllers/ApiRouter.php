@@ -374,7 +374,7 @@ class ApiRouter extends BaseMiddle
                  * can be handled proeprly and reported if necessary. In other environments we want to show the
                  * developer the error quickly and with as much info as possible.
                  */
-                if (Environment::is('PRODUCTION')) {
+                if (Environment::is(Environment::ENV_PROD)) {
                     throw $e;
                 } else {
                     $aOut = [
@@ -460,7 +460,7 @@ class ApiRouter extends BaseMiddle
     {
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('text/html');
-        if (Environment::not('PRODUCTION') && defined('JSON_PRETTY_PRINT')) {
+        if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
             return json_encode($aOut, JSON_PRETTY_PRINT);
         } else {
             return json_encode($aOut);
@@ -480,7 +480,7 @@ class ApiRouter extends BaseMiddle
     {
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('application/json');
-        if (Environment::not('PRODUCTION') && defined('JSON_PRETTY_PRINT')) {
+        if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
             return json_encode($aOut, JSON_PRETTY_PRINT);
         } else {
             return json_encode($aOut);

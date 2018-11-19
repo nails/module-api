@@ -1,5 +1,5 @@
 <?php
-if (\Nails\Environment::is('PRODUCTION')) {
+if (\Nails\Environment::is(Environment::ENV_PROD)) {
     if (class_exists('ApiRouter') && ApiRouter::getOutputFormat() === 'JSON') {
         header('Content-Type: application/json');
     } else {
