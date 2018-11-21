@@ -12,6 +12,7 @@
 
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
+use Nails\Components;
 use Nails\Common\Exception\ValidationException;
 use Nails\Environment;
 use Nails\Factory;
@@ -194,7 +195,7 @@ class ApiRouter extends BaseMiddle
                         'namespace' => 'App\\',
                     ],
                 ];
-                foreach (_NAILS_GET_MODULES() as $oModule) {
+                foreach (Components::modules() as $oModule) {
                     if (!empty($oModule->data->{'nails/module-api'}->namespace)) {
                         $sNamespace = $oModule->data->{'nails/module-api'}->namespace;
                         if (array_key_exists($sNamespace, $aNamespaces)) {
