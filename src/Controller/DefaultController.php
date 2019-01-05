@@ -179,7 +179,7 @@ class DefaultController extends Base
         if (strlen($sKeywords) < static::CONFIG_MIN_SEARCH_LENGTH) {
             throw new ApiException(
                 'Search term must be ' . static::CONFIG_MIN_SEARCH_LENGTH . ' characters or longer.',
-                $oHttpCodes::STATUS__BAD_REQUEST
+                $oHttpCodes::STATUS_BAD_REQUEST
             );
         }
 
