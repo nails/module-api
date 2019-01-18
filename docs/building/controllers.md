@@ -93,7 +93,7 @@ class MyModel extends CrudController
 
 > **THIS CONTROLLER IS DEPRECATED**
 >
-> Easily generate Default Controllers using the [Console Command](/docs/console/README.md)
+> Easily generate Default Controllers using the [Console Command](console.md)
 
 The `DefaultController` is a class which your API endpoints can extend in order to inherit a significant amount of functionality when interfacing with a single model. This allows you to quickly set up an endpoint which provides the following functionality:
 
