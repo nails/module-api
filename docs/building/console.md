@@ -1,5 +1,4 @@
-# Console Commands
-> Documentation is a WIP.
+# API › Building › Console
 
 
 The following console tools are provided by this module and can be executed using the [Nails Console Tool](https://github.com/nails/module-console).
