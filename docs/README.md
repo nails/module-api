@@ -2,7 +2,18 @@
 > Documentation is a WIP.
 
 
-This module provides a unified interface for modules to provide API endpoints.
+This module provides a unified interface for Nails components to provide API endpoints.
 
-- [Controllers](controllers/README.md)
-- [Console](console/README.md)
+
+
+## Building
+
+- [Controllers](building/controllers.md)
+- [Console](building/console.md)
+
+
+
+## Consuming
+
+- [Endpoints](consuming/endpoints.md)
+- [Authentication](consuming/authentication.md)

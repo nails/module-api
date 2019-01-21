@@ -1,16 +1,13 @@
-# API Controllers
-> Documentation is a WIP.
+# API › Building › Controllers
 
 
 ## API Registration
-
-> @todo - complete this
 
 Modules should register by specifying the `nails/module-api.namespace` property in their `composer.json` file. This field is what the API will use to bind URLs to their controllers; e.g. setting this to `store` would expose the module's API controllers at `/api/store/{{controller}`.
 
 The app will always be given the `app` namespace.
 
-Example `composer.json` file (with most fields redacted for berevity):
+Example `composer.json` file (with most fields redacted for brevity):
 
 ```json
 {
@@ -95,8 +92,8 @@ class MyModel extends CrudController
 ## Default Controller
 
 > **THIS CONTROLLER IS DEPRECATED**
-> 
-> Easily generate Default Controllers using the [Console Command](/docs/console/README.md)
+>
+> Easily generate Default Controllers using the [Console Command](console.md)
 
 The `DefaultController` is a class which your API endpoints can extend in order to inherit a significant amount of functionality when interfacing with a single model. This allows you to quickly set up an endpoint which provides the following functionality:
 
@@ -106,7 +103,7 @@ The `DefaultController` is a class which your API endpoints can extend in order 
 
 On the radar is the ability to create, edit and delete items, too.
 
-To utilize the `DefaultController` simply initialise your class and inherit the `DefaultController` class and specify, at minimum, which model you wish to use. E.g.:
+To utilise the `DefaultController` simply initialise your class and inherit the `DefaultController` class and specify, at minimum, which model you wish to use. E.g.:
 
 ```php
 namespace Nails\Api\App;
@@ -131,7 +128,7 @@ In addition to these two constants, you can also set:
 
 By default, the URL maps to the controller class on disk, however there may be certain circumstances where you may wish to use a URL which does not map to the named file (e.g. if you wish to use a reserved word).
 
-This is achived by specifying the `controller-map` property in the module's `composer.json` file under the `nails/module-api` namespace:
+This is achieved by specifying the `controller-map` property in the module's `composer.json` file under the `nails/module-api` namespace:
 
 ```json
 {
