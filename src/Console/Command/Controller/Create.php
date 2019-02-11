@@ -19,21 +19,22 @@ class Create extends BaseMaker
     /**
      * Configure the command
      */
-    protected function configure()
+    protected function configure(): void
     {
-        $this->setName('make:controller:api');
-        $this->setDescription('Creates a new Api controller');
-        $this->addArgument(
-            'modelName',
-            InputArgument::OPTIONAL,
-            'Define the name of the model on which to base the controller'
-        );
-        $this->addArgument(
-            'modelProvider',
-            InputArgument::OPTIONAL,
-            'Define the provider of the model',
-            'app'
-        );
+        $this
+            ->setName('make:controller:api')
+            ->setDescription('Creates a new Api controller')
+            ->addArgument(
+                'modelName',
+                InputArgument::OPTIONAL,
+                'Define the name of the model on which to base the controller'
+            )
+            ->addArgument(
+                'modelProvider',
+                InputArgument::OPTIONAL,
+                'Define the provider of the model',
+                'app'
+            );
     }
 
     // --------------------------------------------------------------------------
@@ -41,11 +42,12 @@ class Create extends BaseMaker
     /**
      * Executes the app
      *
-     * @param  InputInterface $oInput The Input Interface provided by Symfony
+     * @param  InputInterface  $oInput  The Input Interface provided by Symfony
      * @param  OutputInterface $oOutput The Output Interface provided by Symfony
+     *
      * @return int
      */
-    protected function execute(InputInterface $oInput, OutputInterface $oOutput)
+    protected function execute(InputInterface $oInput, OutputInterface $oOutput): int
     {
         parent::execute($oInput, $oOutput);
 
@@ -86,7 +88,7 @@ class Create extends BaseMaker
      * @throws \Exception
      * @return void
      */
-    private function createController()
+    private function createController(): void
     {
         $aFields  = $this->getArguments();
         $aCreated = [];
