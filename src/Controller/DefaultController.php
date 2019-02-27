@@ -50,6 +50,7 @@ class DefaultController extends Base
 
     /**
      * DefaultController constructor.
+     *
      * @throws ApiException
      *
      * @param $oApiRouter
@@ -109,6 +110,7 @@ class DefaultController extends Base
 
     /**
      * Return an item by it's ID, or an array of items by their ID.
+     *
      * @return array
      */
     public function getId($aData = [])
@@ -173,7 +175,7 @@ class DefaultController extends Base
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
         );
-        $sKeywords  = $oInput->get('keywords');
+        $sKeywords  = $oInput->get('search') ?: $oInput->get('keywords');
         $iPage      = (int) $oInput->get('page');
 
         if (strlen($sKeywords) < static::CONFIG_MIN_SEARCH_LENGTH) {
@@ -199,6 +201,7 @@ class DefaultController extends Base
 
     /**
      * Creates a new item
+     *
      * @return array
      */
     public function postRemap()
