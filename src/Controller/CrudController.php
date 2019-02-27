@@ -11,6 +11,7 @@ class CrudController extends Base
 {
     /**
      * The model to use
+     *
      * @var string
      */
     const CONFIG_MODEL_NAME     = '';
@@ -18,42 +19,49 @@ class CrudController extends Base
 
     /**
      * What to use for looking up resources; ID, SLUG, or TOKEN
+     *
      * @var string
      */
     const CONFIG_LOOKUP_METHOD = 'ID';
 
     /**
      * The $_GET parameter with the search query in it
+     *
      * @var string
      */
     const CONFIG_SEARCH_PARAM = 'search';
 
     /**
      * The $_GET parameter with the ID restrictions in it
+     *
      * @var strong
      */
     const CONFIG_IDS_PARAM = 'ids';
 
     /**
      * The $_GET parameter with the page query in it
+     *
      * @var string
      */
     const CONFIG_PAGE_PARAM = 'page';
 
     /**
      * The number of items to return per page
+     *
      * @var integer
      */
     const CONFIG_PER_PAGE = 25;
 
     /**
      * The default data array to use when looking up an item
+     *
      * @var array
      */
     const CONFIG_LOOKUP_DATA = [];
 
     /**
      * Actions which can be performed
+     *
      * @var string
      */
     const ACTION_CREATE = 'CREATE';
@@ -63,12 +71,14 @@ class CrudController extends Base
 
     /**
      * An array of fields which should be ignored when reading
+     *
      * @var array
      */
     const IGNORE_FIELDS_READ = [];
 
     /**
      * An array of fields which should be ignored when writing
+     *
      * @var array
      */
     const IGNORE_FIELDS_WRITE = [
@@ -80,6 +90,7 @@ class CrudController extends Base
 
     /**
      * The model instance
+     *
      * @var Nails\Common\Model\Base
      */
     protected $oModel;
@@ -182,16 +193,16 @@ class CrudController extends Base
             );
 
             $oResponse = Factory::factory('ApiResponse', 'nails/module-api')
-                                ->setData($aResults)
-                                ->setMeta([
-                                    'pagination' => [
-                                        'page'     => $iPage,
-                                        'per_page' => static::CONFIG_PER_PAGE,
-                                        'total'    => $iTotal,
-                                        'previous' => $this->buildUrl($iTotal, $iPage, -1),
-                                        'next'     => $this->buildUrl($iTotal, $iPage, 1),
-                                    ],
-                                ]);
+                ->setData($aResults)
+                ->setMeta([
+                    'pagination' => [
+                        'page'     => $iPage,
+                        'per_page' => static::CONFIG_PER_PAGE,
+                        'total'    => $iTotal,
+                        'previous' => $this->buildUrl($iTotal, $iPage, -1),
+                        'next'     => $this->buildUrl($iTotal, $iPage, 1),
+                    ],
+                ]);
         }
 
         return $oResponse;
@@ -201,6 +212,7 @@ class CrudController extends Base
 
     /**
      * Creates a new resource
+     *
      * @return array
      */
     public function postIndex()
