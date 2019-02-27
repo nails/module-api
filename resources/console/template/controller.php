@@ -17,9 +17,9 @@ return <<<'EOD'
 
 namespace App\Api\Controller;
 
-use Nails\Api\Controller\DefaultController;
+use Nails\Api\Controller\CrudController;
 
-class {{MODEL_NAME}} extends DefaultController
+class {{MODEL_NAME}} extends CrudController
 {
     const CONFIG_MODEL_NAME     = '{{MODEL_NAME}}';
     const CONFIG_MODEL_PROVIDER = '{{MODEL_PROVIDER}}';
