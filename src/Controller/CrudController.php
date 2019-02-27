@@ -5,7 +5,6 @@ namespace Nails\Api\Controller;
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\FactoryException;
-use Nails\Common\Model\Base;
 use Nails\Factory;
 
 class CrudController extends Base
@@ -92,7 +91,7 @@ class CrudController extends Base
     /**
      * The model instance
      *
-     * @var Base
+     * @var \Nails\Common\Model\Base
      */
     protected $oModel;
 
