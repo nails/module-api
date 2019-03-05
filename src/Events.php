@@ -16,12 +16,12 @@ use Nails\Common\Events\Base;
 class Events extends Base
 {
     /**
-     * Fired when API starts
+     * Fired when the API starts
      */
     const API_STARTUP = 'API:STARTUP';
 
     /**
-     * Fired when API is ready
+     * Fired when the API is ready but before the controller is executed
      */
     const API_READY = 'API:READY';
 }

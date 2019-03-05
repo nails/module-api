@@ -8,3 +8,18 @@
 This is the API module for Nails, it brings a unified interface for develping an API in your application.
 
 http://nailsapp.co.uk/modules/api
+
+
+## Documentation
+
+### Building
+
+- [Controllers](docs/building/controllers.md)
+- [Console](docs/building/console.md)
+
+
+### Consuming
+
+- [Endpoints](docs/consuming/endpoints.md)
+- [Authentication](docs/consuming/authentication.md)
+- [Events](docs/consuming/events.md)

@@ -17,3 +17,4 @@ This module provides a unified interface for Nails components to provide API end
 
 - [Endpoints](consuming/endpoints.md)
 - [Authentication](consuming/authentication.md)
+- [Events](consuming/events.md)
