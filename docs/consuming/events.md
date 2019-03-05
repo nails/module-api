@@ -14,7 +14,7 @@ This module exposes the following events through the [Nails Events Service](http
 
 
 <a name="api-startup"></a>
-### `Nails\Admin\Events::API_STARTUP`
+### `Nails\Api\Events::API_STARTUP`
 
 Fired when the API starts
 
