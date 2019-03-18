@@ -13,6 +13,7 @@
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Components;
+use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\ValidationException;
 use Nails\Environment;
 use Nails\Factory;
@@ -199,7 +200,7 @@ class ApiRouter extends BaseMiddle
                     if (!empty($oModule->data->{'nails/module-api'}->namespace)) {
                         $sNamespace = $oModule->data->{'nails/module-api'}->namespace;
                         if (array_key_exists($sNamespace, $aNamespaces)) {
-                            throw new \Exception(
+                            throw new NailsException(
                                 'Conflicting API namespace "' . $sNamespace . '" in use by ' .
                                 '"' . $oModule->slug . '" and "' . $aNamespaces[$sNamespace]->slug . '"'
                             );
@@ -323,7 +324,7 @@ class ApiRouter extends BaseMiddle
 
                 if (!($oResponse instanceof ApiResponse)) {
                     //  This is a misconfiguration error, which we want to bubble up to the error handler
-                    throw new \Exception(
+                    throw new NailsException(
                         'Return object must be an instance of \Nails\Api\Factory\ApiResponse',
                         $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
                     );

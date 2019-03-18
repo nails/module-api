@@ -4,6 +4,7 @@ namespace Nails\Api\Controller;
 
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
+use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\FactoryException;
 use Nails\Factory;
 
@@ -102,17 +103,17 @@ class CrudController extends Base
      *
      * @param \ApiRouter $oApiRouter the ApiRouter object
      *
-     * @throws \Exception
+     * @throws NailsException
      */
     public function __construct($oApiRouter)
     {
         parent::__construct($oApiRouter);
 
         if (empty(static::CONFIG_MODEL_NAME)) {
-            throw new \Exception('"static::CONFIG_MODEL_NAME" is required.');
+            throw new NailsException('"static::CONFIG_MODEL_NAME" is required.');
         }
         if (empty(static::CONFIG_MODEL_PROVIDER)) {
-            throw new \Exception('"static::CONFIG_MODEL_PROVIDER" is required.');
+            throw new NailsException('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
 
         $this->oModel = Factory::model(
