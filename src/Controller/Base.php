@@ -70,7 +70,7 @@ abstract class Base extends BaseMiddle
         $oEventService = Factory::service('Event');
 
         //  Call the API:STARTUP event, API is constructing
-        $oEventService->trigger(Events::API_STARTUP, 'nails/module-api');
+        $oEventService->trigger(Events::API_STARTUP, Events::getEventNamespace());
 
         // --------------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ abstract class Base extends BaseMiddle
         // --------------------------------------------------------------------------
 
         //  Call the API:READY event, API is all geared up and ready to go
-        $oEventService->trigger(Events::API_READY, 'nails/module-api');
+        $oEventService->trigger(Events::API_READY, Events::getEventNamespace());
     }
 
     // --------------------------------------------------------------------------
