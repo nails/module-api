@@ -4,8 +4,8 @@ namespace Nails\Api\Controller;
 
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
-use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\FactoryException;
+use Nails\Common\Exception\NailsException;
 use Nails\Factory;
 
 class CrudController extends Base
@@ -156,9 +156,20 @@ class CrudController extends Base
             }
 
             $this->userCan(static::ACTION_READ, $oItem);
-
             $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
-            $oResponse->setData($this->formatObject($oItem));
+
+            //  If there's a submethod defined, call that
+            $sSubMethod = $oUri->segment(5);
+            if ($sSubMethod && method_exists($this, $sSubMethod)) {
+                $oResponse->setData($this->$sSubMethod($oItem));
+            } elseif ($sSubMethod && !method_exists($this, $sSubMethod)) {
+                throw new ApiException(
+                    '"' . $sSubMethod . '" is not a valid subresource',
+                    $oHttpCodes::STATUS_NOT_FOUND
+                );
+            } else {
+                $oResponse->setData($this->formatObject($oItem));
+            }
 
         } else {
 
