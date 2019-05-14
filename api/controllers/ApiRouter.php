@@ -12,9 +12,9 @@
 
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
-use Nails\Components;
 use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\ValidationException;
+use Nails\Components;
 use Nails\Environment;
 use Nails\Factory;
 
@@ -130,6 +130,7 @@ class ApiRouter extends BaseMiddle
 
     /**
      * Route the call to the correct place
+     *
      * @return void
      */
     public function index()
@@ -331,7 +332,7 @@ class ApiRouter extends BaseMiddle
                 }
 
                 $aOut = [
-                    'status' => $oHttpCodes::STATUS_OK,
+                    'status' => $oResponse->getCode(),
                     'data'   => $oResponse->getData(),
                     'meta'   => $oResponse->getMeta(),
                 ];
@@ -402,7 +403,7 @@ class ApiRouter extends BaseMiddle
     /**
      * Sends $aOut to the browser in the desired format
      *
-     * @param  array $aOut The data to output to the browser
+     * @param array $aOut The data to output to the browser
      *
      * @return void
      */
@@ -454,7 +455,7 @@ class ApiRouter extends BaseMiddle
      * Formats $aOut as a plain text string formatted as JSON (for easy reading)
      * but a plaintext contentType
      *
-     * @param  array $aOut The result of the API call
+     * @param array $aOut The result of the API call
      *
      * @return string
      */
@@ -474,7 +475,7 @@ class ApiRouter extends BaseMiddle
     /**
      * Formats $aOut as a JSON string
      *
-     * @param  array $aOut The result of the API call
+     * @param array $aOut The result of the API call
      *
      * @return string
      */
@@ -494,7 +495,7 @@ class ApiRouter extends BaseMiddle
     /**
      * Sets the output format
      *
-     * @param  string $sFormat The format to use
+     * @param string $sFormat The format to use
      *
      * @return boolean
      */
@@ -513,7 +514,7 @@ class ApiRouter extends BaseMiddle
     /**
      * Sets whether the status header should be sent or not
      *
-     * @param  boolean $sendHeader Whether the header should be sent or not
+     * @param boolean $sendHeader Whether the header should be sent or not
      *
      * @return void
      */

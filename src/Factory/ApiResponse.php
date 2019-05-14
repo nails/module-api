@@ -12,19 +12,62 @@
 
 namespace Nails\Api\Factory;
 
+use Nails\Common\Exception\ValidationException;
+use Nails\Common\Service\HttpCodes;
+
 class ApiResponse
 {
     /**
+     * The API Response code
+     *
+     * @var int
+     */
+    protected $iCode = HttpCodes::STATUS_OK;
+
+    /**
      * The payload for the response
+     *
      * @var mixed
      */
     protected $mData;
 
     /**
      * Additional data to return
+     *
      * @var array
      */
     protected $aMeta = [];
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Set the response code
+     *
+     * @param int $iCode The API response code to use
+     *
+     * @return $this
+     */
+    public function setCode(int $iCode)
+    {
+        if ($iCode < 100 || $iCode > 299) {
+            throw new ValidationException('Response code must be in the range 100-299');
+        }
+
+        $this->iCode = $iCode;
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Get the response code
+     *
+     * @return mixed
+     */
+    public function getCode(): int
+    {
+        return $this->iCode;
+    }
 
     // --------------------------------------------------------------------------
 
@@ -45,6 +88,7 @@ class ApiResponse
 
     /**
      * Get the response payload
+     *
      * @return mixed
      */
     public function getData()
@@ -71,6 +115,7 @@ class ApiResponse
 
     /**
      * Get the response meta
+     *
      * @return array
      */
     public function getMeta()
