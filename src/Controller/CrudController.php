@@ -161,7 +161,7 @@ class CrudController extends Base
             //  If there's a submethod defined, call that
             $sSubMethod = $oUri->segment(5);
             if ($sSubMethod && method_exists($this, $sSubMethod)) {
-                $oResponse->setData($this->$sSubMethod($oItem));
+                $this->$sSubMethod($oResponse, $oItem);
             } elseif ($sSubMethod && !method_exists($this, $sSubMethod)) {
                 throw new ApiException(
                     '"' . $sSubMethod . '" is not a valid subresource',
