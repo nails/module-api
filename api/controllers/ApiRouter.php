@@ -40,9 +40,14 @@ class ApiRouter extends BaseMiddle
     const FORMAT_JSON                  = 'JSON';
     const FORMAT_TXT                   = 'TXT';
     const DEFAULT_FORMAT               = 'JSON';
+    const REQUEST_METHOD_GET           = 'GET';
+    const REQUEST_METHOD_PUT           = 'PUT';
+    const REQUEST_METHOD_POST          = 'POST';
+    const REQUEST_METHOD_DELETE        = 'DELETE';
+    const REQUEST_METHOD_OPTIONS       = 'OPTIONS';
     const VALID_FORMATS                = [
-        'TXT',
-        'JSON',
+        self::FORMAT_TXT,
+        self::FORMAT_JSON,
     ];
     const ACCESS_CONTROL_ALLOW_ORIGIN  = '*';
     const ACCESS_CONTROL_ALLOW_HEADERS = [
@@ -52,11 +57,11 @@ class ApiRouter extends BaseMiddle
         'content-type',
     ];
     const ACCESS_CONTROL_ALLOW_METHODS = [
-        'GET',
-        'PUT',
-        'POST',
-        'DELETE',
-        'OPTIONS',
+        self::REQUEST_METHOD_GET,
+        self::REQUEST_METHOD_PUT,
+        self::REQUEST_METHOD_POST,
+        self::REQUEST_METHOD_DELETE,
+        self::REQUEST_METHOD_OPTIONS,
     ];
     const OUTPUT_FORMAT_PATTERN        = '/\.([a-z]*)$/';
 
@@ -90,7 +95,7 @@ class ApiRouter extends BaseMiddle
         //  Work out the request method
         $oInput               = Factory::service('Input');
         $this->sRequestMethod = $oInput->server('REQUEST_METHOD');
-        $this->sRequestMethod = $this->sRequestMethod ? $this->sRequestMethod : 'GET';
+        $this->sRequestMethod = $this->sRequestMethod ? $this->sRequestMethod : static::REQUEST_METHOD_GET;
 
         /**
          * In order to work out the next few parts we'll analyse the URI string manually.
@@ -136,7 +141,7 @@ class ApiRouter extends BaseMiddle
     public function index()
     {
         //  Handle OPTIONS CORS pre-flight requests
-        if ($this->sRequestMethod === 'OPTIONS') {
+        if ($this->sRequestMethod === static::REQUEST_METHOD_OPTIONS) {
 
             $oOutput = Factory::service('Output');
             $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
@@ -551,5 +556,65 @@ class ApiRouter extends BaseMiddle
         }
         $sLine = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
         $this->oLogger->line($sLine);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the current request method
+     *
+     * @return string
+     */
+    public function getRequestMethod(): string
+    {
+        return $this->sRequestMethod;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Determines whether the request is a GET request
+     *
+     * @return bool
+     */
+    public function isGetRequest(): bool
+    {
+        return $this->getRequestMethod() === static::REQUEST_METHOD_GET;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Determines whether the request is a PUT request
+     *
+     * @return bool
+     */
+    public function isPutRequest(): bool
+    {
+        return $this->getRequestMethod() === static::REQUEST_METHOD_PUT;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Determines whether the request is a POST request
+     *
+     * @return bool
+     */
+    public function isPostRequest(): bool
+    {
+        return $this->getRequestMethod() === static::REQUEST_METHOD_POST;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Determines whether the request is a DELETE request
+     *
+     * @return bool
+     */
+    public function isDeleteRequest(): bool
+    {
+        return $this->getRequestMethod() === static::REQUEST_METHOD_DELETE;
     }
 }
