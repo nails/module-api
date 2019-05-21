@@ -1,14 +1,15 @@
 <?php
 
-namespace Nails\Api\Console\Command\Controller;
+namespace Nails\Api\Console\Command\Controller\Create;
 
 use Nails\Api\Exception\Console\ControllerExistsException;
 use Nails\Console\Command\BaseMaker;
+use Nails\Factory;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Create extends BaseMaker
+class Crud extends BaseMaker
 {
     const RESOURCE_PATH   = NAILS_PATH . 'module-api/resources/console/';
     const CONTROLLER_PATH = NAILS_APP_PATH . 'src/Api/Controller/';
@@ -21,12 +22,18 @@ class Create extends BaseMaker
     protected function configure(): void
     {
         $this
-            ->setName('make:controller:api')
-            ->setDescription('Creates a new API controller')
+            ->setName('make:controller:api:crud')
+            ->setDescription('Creates a new CRUD API controller')
             ->addArgument(
-                'className',
+                'modelName',
                 InputArgument::OPTIONAL,
-                'The name of controller'
+                'The name of the model to which to bind'
+            )
+            ->addArgument(
+                'modelProvider',
+                InputArgument::OPTIONAL,
+                'The provider of the model to which to bind',
+                'app'
             );
     }
 
@@ -88,22 +95,25 @@ class Create extends BaseMaker
 
         try {
 
-            $aClasses = array_filter(explode(',', $aFields['CLASS_NAME']));
+            $aModels = array_filter(explode(',', $aFields['MODEL_NAME']));
 
-            foreach ($aClasses as $sClass) {
+            foreach ($aModels as $sModel) {
 
-                $aFields['CLASS_NAME'] = $sClass;
-                $this->oOutput->write('Creating controller <comment>' . $sClass . '</comment>... ');
+                $aFields['MODEL_NAME'] = $sModel;
+                $this->oOutput->write('Creating controller <comment>' . $sModel . '</comment>... ');
+
+                //  Validate model exists by attempting to load it
+                Factory::model($sModel, $aFields['MODEL_PROVIDER']);
 
                 //  Check for existing controller
-                $sPath = static::CONTROLLER_PATH . $sClass . '.php';
+                $sPath = static::CONTROLLER_PATH . $sModel . '.php';
                 if (file_exists($sPath)) {
                     throw new ControllerExistsException(
-                        'Controller "' . $sClass . '" exists already at path "' . $sPath . '"'
+                        'Controller "' . $sModel . '" exists already at path "' . $sPath . '"'
                     );
                 }
 
-                $this->createFile($sPath, $this->getResource('template/controller.php', $aFields));
+                $this->createFile($sPath, $this->getResource('template/controller_crud.php', $aFields));
                 $aCreated[] = $sPath;
                 $this->oOutput->writeln('<info>done!</info>');
             }

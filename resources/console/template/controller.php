@@ -9,20 +9,37 @@ return <<<'EOD'
 <?php
 
 /**
- * The {{MODEL_NAME}} API controller
+ * The {{CLASS_NAME}} API controller
  *
  * @package  App
- * @category controller
+ * @category API Controller
  */
 
 namespace App\Api\Controller;
 
-use Nails\Api\Controller\CrudController;
+use Nails\Api\Controller\Base;
+use Nails\Api\Factory\ApiResponse;
+use Nails\Common\Exception\FactoryException;
+use Nails\Factory;
 
-class {{MODEL_NAME}} extends CrudController
+class {{CLASS_NAME}} extends Base
 {
-    const CONFIG_MODEL_NAME     = '{{MODEL_NAME}}';
-    const CONFIG_MODEL_PROVIDER = '{{MODEL_PROVIDER}}';
+    /**
+     * GET: /api/app/{{CLASS_NAME}}
+     *
+     * @return ApiResponse
+     * @throws FactoryException
+     */
+    public function getIndex(): ApiResponse
+    {
+        // @todo - update this stub
+
+        /** @var ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
+        $oApiResponse->setData(['foo' => 'bar']);
+
+        return $oApiResponse;
+    }
 }
 
 EOD;
