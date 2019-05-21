@@ -6,6 +6,9 @@ use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\FactoryException;
 use Nails\Common\Exception\NailsException;
+use Nails\Common\Service\HttpCodes;
+use Nails\Common\Service\Input;
+use Nails\Common\Service\Uri;
 use Nails\Factory;
 
 class CrudController extends Base
@@ -141,10 +144,10 @@ class CrudController extends Base
         $oHttpCodes = Factory::service('HttpCodes');
         if ($oUri->segment(4)) {
 
-            //  Test that there's not an explicit method defined for this
-            $sMethod = 'get' . ucfirst($oUri->segment(4));
-            if (method_exists($this, $sMethod)) {
-                return $this->$sMethod();
+            //  Test that there's not an explicit method defined for this request
+            $sExplicitMethod = 'get' . ucfirst($oUri->segment(4));
+            if (method_exists($this, $sExplicitMethod)) {
+                return $this->$sExplicitMethod();
             }
 
             $oItem = $this->lookUpResource($aData);
@@ -223,41 +226,77 @@ class CrudController extends Base
     // --------------------------------------------------------------------------
 
     /**
-     * Creates a new resource
+     * Handles POST requests
      *
-     * @return array
+     * @param string $sMethod The method being called
+     * @param array  $aData   Any data to apply to the requests
+     *
+     * @return ApiResponse
+     * @throws ApiException
+     * @throws FactoryException
      */
-    public function postIndex()
+    public function postRemap($sMethod, array $aData = [])
     {
-        $oInput     = Factory::service('Input');
+        /** @var Input $oInput */
+        $oInput = Factory::service('Input');
+        /** @var HttpCodes $oHttpCodes */
         $oHttpCodes = Factory::service('HttpCodes');
+        /** @var Uri $oUri */
+        $oUri = Factory::service('Uri');
+        /** @var ApiResponse $oResponse */
+        $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
-        $this->userCan(static::ACTION_CREATE);
-
-        /**
-         * First check the $_POST superglobal, if that's empty then fall back to
-         * the body of the request assuming it is JSON.
-         */
-        $aData = $oInput->post();
-        if (empty($aData)) {
-            $sData = stream_get_contents(fopen('php://input', 'r'));
-            $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
+        //  Test that there's not an explicit method defined for this action
+        $sExplicitMethod = 'post' . ucfirst($oUri->segment(4));
+        if (method_exists($this, $sExplicitMethod)) {
+            return $this->$sExplicitMethod();
         }
 
-        $aData   = $this->validateUserInput($aData);
-        $iItemId = $this->oModel->create($aData);
+        if (empty($sMethod)) {
 
-        if (empty($iItemId)) {
+            //  No method is being called, create a new item
+            $this->userCan(static::ACTION_CREATE);
+
+            $aData   = $this->getRequestData();
+            $aData   = $this->validateUserInput($aData);
+            $iItemId = $this->oModel->create($aData);
+
+            if (empty($iItemId)) {
+                throw new ApiException(
+                    'Failed to create resource. ' . $this->oModel->lastError(),
+                    $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+                );
+            }
+
+            $oItem = $this->oModel->getById($iItemId, static::CONFIG_LOOKUP_DATA);
+            $oResponse->setData($this->formatObject($oItem));
+
+            return $oResponse;
+        }
+
+        //  If there's a submethod defined, verify that the resource is valid and then call the sub method
+        $sSubMethod = $oUri->segment(5);
+        if (empty($sSubMethod)) {
             throw new ApiException(
-                'Failed to create resource. ' . $this->oModel->lastError(),
-                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+                'A subresourc emust be specified when posting against an existing item',
+                $oHttpCodes::STATUS_NOT_FOUND
+            );
+        } elseif (!method_exists($this, $sSubMethod)) {
+            throw new ApiException(
+                '"' . $sSubMethod . '" is not a valid subresource',
+                $oHttpCodes::STATUS_NOT_FOUND
             );
         }
 
-        $oItem = $this->oModel->getById($iItemId, static::CONFIG_LOOKUP_DATA);
+        $oItem = $this->lookUpResource($aData);
+        if (!$oItem) {
+            throw new ApiException(
+                'Resource not found',
+                $oHttpCodes::STATUS_NOT_FOUND
+            );
+        }
 
-        $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
-        $oResponse->setData($this->formatObject($oItem));
+        $this->$sSubMethod($oResponse, $oItem);
 
         return $oResponse;
     }
@@ -271,10 +310,14 @@ class CrudController extends Base
      *
      * @return array
      */
-    public function putRemap($sMethod)
+    public function putRemap($sMethod, array $aData = [])
     {
+        /** @var Uri $oUri */
+        $oUri = Factory::service('Uri');
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+
         //  Test that there's not an explicit method defined for this action
-        $oUri    = Factory::service('Uri');
         $sMethod = 'put' . ucfirst($oUri->segment(4));
         if (method_exists($this, $sMethod)) {
             return $this->$sMethod();
@@ -282,28 +325,44 @@ class CrudController extends Base
 
         // --------------------------------------------------------------------------
 
-        $oItem = $this->lookUpResource();
-        if (!$oItem) {
-            throw new ApiException('Resource not found', 404);
-        }
-
-        $this->userCan(static::ACTION_UPDATE, $oItem);
-
-        $oHttpCodes = Factory::service('HttpCodes');
-
-        //  Read from php:://input as using PUT; expecting a JSONobject as the payload
-        $sData = stream_get_contents(fopen('php://input', 'r'));
-        $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
-        $aData = $this->validateUserInput($aData, $oItem);
-
-        if (!$this->oModel->update($oItem->id, $aData)) {
+        //  If there's a submethod defined, verify that the resource is valid and then call the sub method
+        $sSubMethod = $oUri->segment(5);
+        if (!empty($sSubMethod) && !method_exists($this, $sSubMethod)) {
             throw new ApiException(
-                'Failed to update resource. ' . $this->oModel->lastError(),
-                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+                '"' . $sSubMethod . '" is not a valid subresource',
+                $oHttpCodes::STATUS_NOT_FOUND
             );
         }
 
-        return Factory::factory('ApiResponse', 'nails/module-api');
+        $oItem = $this->lookUpResource($aData);
+        if (!$oItem) {
+            throw new ApiException(
+                'Resource not found',
+                $oHttpCodes::STATUS_NOT_FOUND
+            );
+        }
+
+        /** @var ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
+
+        if (empty($sSubMethod)) {
+
+            //  Read from php:://input as using PUT; expecting a JSONobject as the payload
+            $aData = $this->getRequestData();
+            $aData = $this->validateUserInput($aData, $oItem);
+
+            if (!$this->oModel->update($oItem->id, $aData)) {
+                throw new ApiException(
+                    'Failed to update resource. ' . $this->oModel->lastError(),
+                    $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+                );
+            }
+
+        } else {
+            $this->$sSubMethod($oApiResponse, $oItem);
+        }
+
+        return $oApiResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -315,19 +374,31 @@ class CrudController extends Base
      *
      * @return array
      */
-    public function deleteRemap($sMethod)
+    public function deleteRemap($sMethod, array $aData = [])
     {
+        /** @var Uri $oUri */
+        $oUri = Factory::service('Uri');
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+
         //  Test that there's not an explicit method defined for this action
-        $oUri    = Factory::service('Uri');
-        $sMethod = 'put' . ucfirst($oUri->segment(4));
+        $sMethod = 'delete' . ucfirst($oUri->segment(4));
         if (method_exists($this, $sMethod)) {
             return $this->$sMethod();
         }
 
         // --------------------------------------------------------------------------
 
-        $oHttpCodes = Factory::service('HttpCodes');
-        $oItem      = $this->lookUpResource();
+        //  If there's a submethod defined, verify that the resource is valid and then call the sub method
+        $sSubMethod = $oUri->segment(5);
+        if (!empty($sSubMethod) && !method_exists($this, $sSubMethod)) {
+            throw new ApiException(
+                '"' . $sSubMethod . '" is not a valid subresource',
+                $oHttpCodes::STATUS_NOT_FOUND
+            );
+        }
+
+        $oItem = $this->lookUpResource($aData);
         if (!$oItem) {
             throw new ApiException(
                 'Resource not found',
@@ -335,16 +406,25 @@ class CrudController extends Base
             );
         }
 
-        $this->userCan(static::ACTION_DELETE, $oItem);
+        /** @var ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
-        if (!$this->oModel->delete($oItem->id)) {
-            throw new ApiException(
-                'Failed to delete resource. ' . $this->oModel->lastError(),
-                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
-            );
+        if (empty($sSubMethod)) {
+
+            $this->userCan(static::ACTION_DELETE, $oItem);
+
+            if (!$this->oModel->delete($oItem->id)) {
+                throw new ApiException(
+                    'Failed to delete resource. ' . $this->oModel->lastError(),
+                    $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+                );
+            }
+
+        } else {
+            $this->$sSubMethod($oApiResponse, $oItem);
         }
 
-        return Factory::factory('ApiResponse', 'nails/module-api');
+        return $oApiResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -355,7 +435,7 @@ class CrudController extends Base
      * @param array   $aData    Any data to pass to the lookup
      * @param integer $iSegment The segment containing the item's ID/Token/Slug
      *
-     * @return \stdClass|false
+     * @return \Nails\Common\Resource\|false
      * @throws FactoryException
      */
     protected function lookUpResource($aData = [], $iSegment = 4)
@@ -491,5 +571,31 @@ class CrudController extends Base
             unset($oObj->{$sIgnoredField});
         }
         return $oObj;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Gets the request data from the POST vars, falling back to the request body
+     *
+     * @return array
+     * @throws FactoryException
+     */
+    protected function getRequestData(): array
+    {
+        /**
+         * First check the $_POST superglobal, if that's empty then fall back to
+         * the body of the request assuming it is JSON.
+         */
+        /** @var Input $oInput */
+        $oInput = Factory::service('Input');
+        $aData  = $oInput->post();
+
+        if (empty($aData)) {
+            $sData = stream_get_contents(fopen('php://input', 'r'));
+            $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
+        }
+
+        return $aData;
     }
 }
