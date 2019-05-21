@@ -252,7 +252,7 @@ class CrudController extends Base
             return $this->$sExplicitMethod();
         }
 
-        if (empty($sMethod)) {
+        if (empty($sMethod) || $sMethod === 'index') {
 
             //  No method is being called, create a new item
             $this->userCan(static::ACTION_CREATE);
@@ -278,7 +278,7 @@ class CrudController extends Base
         $sSubMethod = $oUri->segment(5);
         if (empty($sSubMethod)) {
             throw new ApiException(
-                'A subresourc emust be specified when posting against an existing item',
+                'A subresource must be specified when posting against an existing item',
                 $oHttpCodes::STATUS_NOT_FOUND
             );
         } elseif (!method_exists($this, $sSubMethod)) {
