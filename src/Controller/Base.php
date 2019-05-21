@@ -53,6 +53,7 @@ abstract class Base extends BaseMiddle
 
     /**
      * The Api Router instance
+     *
      * @var \ApiRouter
      */
     protected $oApiRouter;
@@ -99,8 +100,8 @@ abstract class Base extends BaseMiddle
     /**
      * Whether the user is authenticated.
      *
-     * @param  string $sHttpMethod The HTTP Method protocol being used
-     * @param  string $sMethod     The controller method being executed
+     * @param string $sHttpMethod The HTTP Method protocol being used
+     * @param string $sMethod     The controller method being executed
      *
      * @return boolean/array       Boolean true or false. Can also return an array
      *                             with two elements (status and error) which
