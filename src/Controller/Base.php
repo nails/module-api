@@ -15,6 +15,8 @@ namespace Nails\Api\Controller;
 // --------------------------------------------------------------------------
 
 use Nails\Api\Events;
+use Nails\Common\Exception\FactoryException;
+use Nails\Common\Service\Input;
 use Nails\Factory;
 
 // --------------------------------------------------------------------------
@@ -110,5 +112,31 @@ abstract class Base extends BaseMiddle
     public static function isAuthenticated($sHttpMethod = '', $sMethod = '')
     {
         return static::REQUIRE_AUTH && !isLoggedIn() ? false : true;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Gets the request data from the POST vars, falling back to the request body
+     *
+     * @return array
+     * @throws FactoryException
+     */
+    protected function getRequestData(): array
+    {
+        /**
+         * First check the $_POST superglobal, if that's empty then fall back to
+         * the body of the request assuming it is JSON.
+         */
+        /** @var Input $oInput */
+        $oInput = Factory::service('Input');
+        $aData  = $oInput->post();
+
+        if (empty($aData)) {
+            $sData = stream_get_contents(fopen('php://input', 'r'));
+            $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
+        }
+
+        return $aData;
     }
 }
