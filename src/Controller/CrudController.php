@@ -547,7 +547,7 @@ class CrudController extends Base
             return null;
         }
 
-        $sUrl = site_url() . uri_string();
+        $sUrl = siteUrl() . uri_string();
 
         if (!empty($aParams)) {
             $sUrl .= '?' . http_build_query($aParams);
