@@ -131,9 +131,9 @@ class DefaultController extends Base
         $aIds = array_filter($aIds);
         $aIds = array_unique($aIds);
 
-        if (count($aIds) > self::CONFIG_MAX_ITEMS_PER_REQUEST) {
+        if (count($aIds) > static::CONFIG_MAX_ITEMS_PER_REQUEST) {
             throw new ApiException(
-                'You can request a maximum of ' . self::CONFIG_MAX_ITEMS_PER_REQUEST . ' items per request',
+                'You can request a maximum of ' . static::CONFIG_MAX_ITEMS_PER_REQUEST . ' items per request',
                 $oHttpCodes::STATUS_BAD_REQUEST
             );
         }
