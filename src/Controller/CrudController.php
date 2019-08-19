@@ -119,6 +119,7 @@ class CrudController extends Base
             throw new NailsException('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
 
+        /** @var \Nails\Common\Model\Base oModel */
         $this->oModel = Factory::model(
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
@@ -140,8 +141,11 @@ class CrudController extends Base
      */
     public function getRemap($sMethod, array $aData = [])
     {
-        $oUri       = Factory::service('Uri');
+        /** @var Uri $oUri */
+        $oUri = Factory::service('Uri');
+        /** @var HttpCodes $oHttpCodes */
         $oHttpCodes = Factory::service('HttpCodes');
+
         if ($oUri->segment(4)) {
 
             //  Test that there's not an explicit method defined for this request
@@ -150,6 +154,7 @@ class CrudController extends Base
                 return $this->$sExplicitMethod();
             }
 
+            $aData = $this->getLookupData(static::ACTION_READ, $aData);
             $oItem = $this->lookUpResource($aData);
             if (!$oItem) {
                 throw new ApiException(
@@ -159,6 +164,7 @@ class CrudController extends Base
             }
 
             $this->userCan(static::ACTION_READ, $oItem);
+            /** @var ApiResponse $oResponse */
             $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
             //  If there's a submethod defined, call that
@@ -178,8 +184,9 @@ class CrudController extends Base
 
             $this->userCan(static::ACTION_READ);
 
+            /** @var Input $oInput */
             $oInput = Factory::service('Input');
-            $aData  = array_merge(static::CONFIG_LOOKUP_DATA, $aData);
+            $aData  = $this->getLookupData(static::ACTION_READ, $aData);
 
             //  Paging
             $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
@@ -207,6 +214,7 @@ class CrudController extends Base
                 )
             );
 
+            /** @var ApiResponse $oResponse */
             $oResponse = Factory::factory('ApiResponse', 'nails/module-api')
                 ->setData($aResults)
                 ->setMeta([
@@ -257,7 +265,7 @@ class CrudController extends Base
             //  No method is being called, create a new item
             $this->userCan(static::ACTION_CREATE);
 
-            $aData   = $this->getRequestData();
+            $aData   = $this->getPostedData();
             $aData   = $this->validateUserInput($aData);
             $iItemId = $this->oModel->create($aData);
 
@@ -268,7 +276,8 @@ class CrudController extends Base
                 );
             }
 
-            $oItem = $this->oModel->getById($iItemId, static::CONFIG_LOOKUP_DATA);
+            $aData = $this->getLookupData(static::ACTION_READ, []);
+            $oItem = $this->oModel->getById($iItemId, $aData);
             $oResponse->setData($this->formatObject($oItem));
 
             return $oResponse;
@@ -334,6 +343,7 @@ class CrudController extends Base
             );
         }
 
+        $aData = $this->getLookupData(static::ACTION_UPDATE, $aData);
         $oItem = $this->lookUpResource($aData);
         if (!$oItem) {
             throw new ApiException(
@@ -348,7 +358,7 @@ class CrudController extends Base
         if (empty($sSubMethod)) {
 
             //  Read from php:://input as using PUT; expecting a JSONobject as the payload
-            $aData = $this->getRequestData();
+            $aData = $this->getPostedData();
             $aData = $this->validateUserInput($aData, $oItem);
 
             if (!$this->oModel->update($oItem->id, $aData)) {
@@ -398,6 +408,7 @@ class CrudController extends Base
             );
         }
 
+        $aData = $this->getLookupData(static::ACTION_DELETE, $aData);
         $oItem = $this->lookUpResource($aData);
         if (!$oItem) {
             throw new ApiException(
@@ -440,12 +451,13 @@ class CrudController extends Base
      */
     protected function lookUpResource($aData = [], $iSegment = 4)
     {
+        /** @var Uri $oUri */
         $oUri        = Factory::service('Uri');
         $sIdentifier = $oUri->segment($iSegment);
 
         //  Handle requests for expansions
+        /** @var Input $oInput */
         $oInput      = Factory::service('Input');
-        $aData       = array_merge(static::CONFIG_LOOKUP_DATA, $aData);
         $aExpansions = array_filter((array) $oInput->get('expand'));
         if ($aExpansions) {
             if (!array_key_exists('expand', $aData)) {
@@ -466,6 +478,22 @@ class CrudController extends Base
                 return $this->oModel->getByToken($sIdentifier, $aData);
                 break;
         }
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Provides a hook for manipulating the lookup data
+     *
+     * @param string $sMode The lookup mode
+     * @param array  $aData The lookup data
+     *
+     * @return array
+     */
+    protected function getLookupData(string $sMode, array $aData): array
+    {
+        //  This method should be overridden to implement specific behaviour
+        return array_merge(static::CONFIG_LOOKUP_DATA, $aData);
     }
 
     // --------------------------------------------------------------------------
@@ -571,5 +599,31 @@ class CrudController extends Base
             unset($oObj->{$sIgnoredField});
         }
         return $oObj;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Gets the request data from the POST vars, falling back to the request body
+     *
+     * @return array
+     * @throws FactoryException
+     */
+    protected function getPostedData(): array
+    {
+        /**
+         * First check the $_POST superglobal, if that's empty then fall back to
+         * the body of the request assuming it is JSON.
+         */
+        /** @var Input $oInput */
+        $oInput = Factory::service('Input');
+        $aData  = $oInput->post();
+
+        if (empty($aData)) {
+            $sData = stream_get_contents(fopen('php://input', 'r'));
+            $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
+        }
+
+        return $aData;
     }
 }
