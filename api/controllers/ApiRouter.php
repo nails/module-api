@@ -10,6 +10,7 @@
  * @link
  */
 
+use Nails\Auth;
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\NailsException;
@@ -161,7 +162,7 @@ class ApiRouter extends BaseMiddle
 
                 $oInput                = Factory::service('Input');
                 $oHttpCodes            = Factory::service('HttpCodes');
-                $oUserAccessTokenModel = Factory::model('UserAccessToken', 'nails/module-auth');
+                $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
                 $sAccessToken          = $oInput->header('X-Access-Token');
 
                 if (!$sAccessToken) {
@@ -175,7 +176,7 @@ class ApiRouter extends BaseMiddle
                 if ($sAccessToken) {
                     $oAccessToken = $oUserAccessTokenModel->getByValidToken($sAccessToken);
                     if ($oAccessToken) {
-                        $oUserModel = Factory::model('User', 'nails/module-auth');
+                        $oUserModel = Factory::model('User', Auth\Constants::MODULE_SLUG);
                         $oUserModel->setLoginData($oAccessToken->user_id, false);
                     } else {
                         throw new ApiException(
