@@ -11,6 +11,11 @@ use Nails\Common\Service\Input;
 use Nails\Common\Service\Uri;
 use Nails\Factory;
 
+/**
+ * Class CrudController
+ *
+ * @package Nails\Api\Controller
+ */
 class CrudController extends Base
 {
     /**
@@ -276,7 +281,7 @@ class CrudController extends Base
                 );
             }
 
-            $aData = $this->getLookupData(static::ACTION_READ, []);
+            $aData = $this->getLookupData(static::ACTION_READ, $aData);
             $oItem = $this->oModel->getById($iItemId, $aData);
             $oResponse->setData($this->formatObject($oItem));
 
@@ -297,6 +302,7 @@ class CrudController extends Base
             );
         }
 
+        $aData = $this->getLookupData(static::ACTION_READ, $aData);
         $oItem = $this->lookUpResource($aData);
         if (!$oItem) {
             throw new ApiException(
