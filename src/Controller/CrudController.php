@@ -566,9 +566,15 @@ class CrudController extends Base
      */
     protected function buildUrl($iTotal, $iPage, $iPageOffset)
     {
-        $aParams = [
-            'page' => $iPage + $iPageOffset,
-        ];
+        /** @var Input $oInput */
+        $oInput = Factory::service('Input');
+
+        $aParams = array_merge(
+            $oInput->get(),
+            [
+                'page' => $iPage + $iPageOffset,
+            ]
+        );
 
         if ($aParams['page'] <= 0) {
             return null;
