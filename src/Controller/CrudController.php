@@ -6,6 +6,7 @@ use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\FactoryException;
 use Nails\Common\Exception\NailsException;
+use Nails\Common\Service\FormValidation;
 use Nails\Common\Service\HttpCodes;
 use Nails\Common\Service\Input;
 use Nails\Common\Service\Uri;
@@ -530,25 +531,37 @@ class CrudController extends Base
      */
     protected function validateUserInput($aData, $oItem = null)
     {
-        $aOut       = [];
-        $aFields    = $this->oModel->describeFields();
-        $aKeys      = array_unique(
+        $aOut    = [];
+        $aFields = $this->oModel->describeFields();
+        $aKeys   = array_unique(
             array_merge(
                 array_keys($aFields),
                 arrayExtractProperty($this->oModel->getExpandableFields(), 'trigger')
             )
         );
+
         $aValidKeys = array_diff($aKeys, static::IGNORE_FIELDS_WRITE);
+        $aRules     = [];
 
         foreach ($aValidKeys as $sValidKey) {
 
             $oField = getFromArray($sValidKey, $aFields);
             if (array_key_exists($sValidKey, $aData)) {
-                $aOut[$sValidKey] = getFromArray($sValidKey, $aData);
-            }
 
-            //  @todo (Pablo - 2018-08-20) - Further validation using the $oField->validation rules
+                $aOut[$sValidKey] = getFromArray($sValidKey, $aData);
+                $oField           = getFromArray($sValidKey, $aFields);
+
+                if (!empty($oField->validation)) {
+                    $aRules[$sValidKey] = $oField->validation;
+                }
+            }
         }
+
+        /** @var FormValidation $oFormValidation */
+        $oFormValidation = Factory::service('FormValidation');
+        $oFormValidation
+            ->buildValidator($aRules, [], $aOut)
+            ->run();
 
         return $aOut;
     }
