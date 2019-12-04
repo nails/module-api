@@ -36,6 +36,9 @@ if (class_exists('\App\Api\Controller\BaseRouter')) {
 
 // --------------------------------------------------------------------------
 
+/**
+ * Class ApiRouter
+ */
 class ApiRouter extends BaseMiddle
 {
     const FORMAT_JSON                  = 'JSON';
@@ -84,7 +87,9 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
-     * Constructs the router, defining the request variables
+     * ApiRouter constructor.
+     *
+     * @throws \Nails\Common\Exception\FactoryException
      */
     public function __construct()
     {
@@ -129,6 +134,11 @@ class ApiRouter extends BaseMiddle
 
     // --------------------------------------------------------------------------
 
+    /**
+     * Returns the output format
+     *
+     * @return string|null
+     */
     public static function getOutputFormat()
     {
         preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
@@ -140,14 +150,13 @@ class ApiRouter extends BaseMiddle
 
     /**
      * Route the call to the correct place
-     *
-     * @return void
      */
     public function index()
     {
         //  Handle OPTIONS CORS pre-flight requests
         if ($this->sRequestMethod === static::REQUEST_METHOD_OPTIONS) {
 
+            /** @var \Nails\Common\Service\Output $oOutput */
             $oOutput = Factory::service('Output');
             $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
             $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
@@ -164,8 +173,11 @@ class ApiRouter extends BaseMiddle
                  * and POST arrays.
                  */
 
-                $oInput                = Factory::service('Input');
-                $oHttpCodes            = Factory::service('HttpCodes');
+                /** @var \Nails\Common\Service\Input $oInput */
+                $oInput = Factory::service('Input');
+                /** @var \Nails\Common\Service\HttpCodes $oHttpCodes */
+                $oHttpCodes = Factory::service('HttpCodes');
+                /** @var Auth\Model\User\AccessToken $oUserAccessTokenModel */
                 $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
 
 
@@ -185,6 +197,7 @@ class ApiRouter extends BaseMiddle
                     $oAccessToken       = $oUserAccessTokenModel->getByValidToken($sAccessToken);
 
                     if ($oAccessToken) {
+                        /** @var Auth\Model\User $oUserModel */
                         $oUserModel = Factory::model('User', Auth\Constants::MODULE_SLUG);
                         $oUserModel->setLoginData($oAccessToken->user_id, false);
                     } else {
@@ -419,13 +432,14 @@ class ApiRouter extends BaseMiddle
      * Sends $aOut to the browser in the desired format
      *
      * @param array $aOut The data to output to the browser
-     *
-     * @return void
      */
     protected function output($aOut = [])
     {
-        $oInput     = Factory::service('Input');
-        $oOutput    = Factory::service('Output');
+        /** @var \Nails\Common\Service\Input $oInput */
+        $oInput = Factory::service('Input');
+        /** @var \Nails\Common\Service\Output $oOutput */
+        $oOutput = Factory::service('Output');
+        /** @var \Nails\Common\Service\HttpCodes $oHttpCodes */
         $oHttpCodes = Factory::service('HttpCodes');
 
         //  Set cache headers
@@ -476,6 +490,7 @@ class ApiRouter extends BaseMiddle
      */
     private function outputTxt($aOut)
     {
+        /** @var \Nails\Common\Service\Output $oOutput */
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('text/html');
         if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
@@ -496,6 +511,7 @@ class ApiRouter extends BaseMiddle
      */
     private function outputJson($aOut)
     {
+        /** @var \Nails\Common\Service\Output $oOutput */
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('application/json');
         if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
@@ -512,9 +528,9 @@ class ApiRouter extends BaseMiddle
      *
      * @param string $sFormat The format to use
      *
-     * @return boolean
+     * @return bool
      */
-    public function outputSetFormat($sFormat)
+    public function outputSetFormat($sFormat): bool
     {
         if (static::isValidFormat($sFormat)) {
             $this->sOutputFormat = strtoupper($sFormat);
@@ -529,11 +545,9 @@ class ApiRouter extends BaseMiddle
     /**
      * Sets whether the status header should be sent or not
      *
-     * @param boolean $sendHeader Whether the header should be sent or not
-     *
-     * @return void
+     * @param bool $sendHeader Whether the header should be sent or not
      */
-    public function outputSendHeader($sendHeader)
+    public function outputSendHeader($sendHeader): bool
     {
         $this->bOutputSendHeader = !empty($sendHeader);
     }
@@ -545,9 +559,9 @@ class ApiRouter extends BaseMiddle
      *
      * @param string $sFormat The format to check
      *
-     * @return boolean
+     * @return bool
      */
-    private static function isValidFormat($sFormat)
+    private static function isValidFormat($sFormat): bool
     {
         return in_array(strtoupper($sFormat), static::VALID_FORMATS);
     }
