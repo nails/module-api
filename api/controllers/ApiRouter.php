@@ -76,6 +76,7 @@ class ApiRouter extends BaseMiddle
     private $sOutputFormat;
     private $bOutputSendHeader;
     private $oLogger;
+    private $sAccessToken;
 
     // --------------------------------------------------------------------------
 
@@ -174,7 +175,10 @@ class ApiRouter extends BaseMiddle
                 }
 
                 if ($sAccessToken) {
-                    $oAccessToken = $oUserAccessTokenModel->getByValidToken($sAccessToken);
+
+                    $this->sAccessToken = $sAccessToken;
+                    $oAccessToken       = $oUserAccessTokenModel->getByValidToken($sAccessToken);
+
                     if ($oAccessToken) {
                         $oUserModel = Factory::model('User', Auth\Constants::MODULE_SLUG);
                         $oUserModel->setLoginData($oAccessToken->user_id, false);
@@ -617,5 +621,17 @@ class ApiRouter extends BaseMiddle
     public function isDeleteRequest(): bool
     {
         return $this->getRequestMethod() === static::REQUEST_METHOD_DELETE;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the current Access Token
+     *
+     * @return string|null
+     */
+    public function getAccessToken(): ?string
+    {
+        return $this->sAccessToken;
     }
 }
