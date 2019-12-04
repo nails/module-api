@@ -50,9 +50,12 @@ class ApiRouter extends BaseMiddle
         self::FORMAT_TXT,
         self::FORMAT_JSON,
     ];
+    const ACCESS_TOKEN_HEADER          = 'X-Access-Token';
+    const ACCESS_TOKEN_POST_PARAM      = 'accessToken';
+    const ACCESS_TOKEN_GET_PARAM       = 'accessToken';
     const ACCESS_CONTROL_ALLOW_ORIGIN  = '*';
     const ACCESS_CONTROL_ALLOW_HEADERS = [
-        'X-Access-Token',
+        self::ACCESS_TOKEN_HEADER,
         'content',
         'origin',
         'content-type',
@@ -164,14 +167,16 @@ class ApiRouter extends BaseMiddle
                 $oInput                = Factory::service('Input');
                 $oHttpCodes            = Factory::service('HttpCodes');
                 $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
-                $sAccessToken          = $oInput->header('X-Access-Token');
+
+
+                $sAccessToken = $oInput->header(static::ACCESS_TOKEN_HEADER);
 
                 if (!$sAccessToken) {
-                    $sAccessToken = $oInput->post('accessToken');
+                    $sAccessToken = $oInput->post(static::ACCESS_TOKEN_POST_PARAM);
                 }
 
                 if (!$sAccessToken) {
-                    $sAccessToken = $oInput->get('accessToken');
+                    $sAccessToken = $oInput->get(static::ACCESS_TOKEN_GET_PARAM);
                 }
 
                 if ($sAccessToken) {
