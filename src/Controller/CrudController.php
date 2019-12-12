@@ -71,7 +71,7 @@ class CrudController extends Base
     /**
      * The number of items to return per page
      *
-     * @var integer
+     * @var int
      */
     const CONFIG_PER_PAGE = 25;
 
@@ -469,8 +469,8 @@ class CrudController extends Base
     /**
      * Fetches an object by it's ID, SLUG, or TOKEN
      *
-     * @param array   $aData    Any data to pass to the lookup
-     * @param integer $iSegment The segment containing the item's ID/Token/Slug
+     * @param array $aData    Any data to pass to the lookup
+     * @param int   $iSegment The segment containing the item's ID/Token/Slug
      *
      * @return \Nails\Common\Resource\|false
      * @throws FactoryException
@@ -590,9 +590,9 @@ class CrudController extends Base
     /**
      * Builds pagination URL
      *
-     * @param integer $iTotal      The total number of items
-     * @param integer $iPage       The current page number
-     * @param integer $iPageOffset The offset to the page number
+     * @param int $iTotal      The total number of items
+     * @param int $iPage       The current page number
+     * @param int $iPageOffset The offset to the page number
      *
      * @return null|string
      */
