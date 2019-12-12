@@ -380,6 +380,8 @@ class CrudController extends Base
 
         if (empty($sSubMethod)) {
 
+            $this->userCan(static::ACTION_UPDATE);
+
             //  Read from php:://input as using PUT; expecting a JSONobject as the payload
             $aData = $this->getPostedData();
             $aData = $this->validateUserInput($aData, $oItem);
