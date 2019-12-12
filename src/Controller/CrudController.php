@@ -34,6 +34,13 @@ class CrudController extends Base
     const CONFIG_MODEL_PROVIDER = '';
 
     /**
+     * The URI segment which will contain the item's identifier
+     *
+     * @var int
+     */
+    const CONFIG_URI_SEGMENT_IDENTIFIER = 4;
+
+    /**
      * What to use for looking up resources; ID, SLUG, or TOKEN
      *
      * @var string
@@ -158,10 +165,10 @@ class CrudController extends Base
         /** @var HttpCodes $oHttpCodes */
         $oHttpCodes = Factory::service('HttpCodes');
 
-        if ($oUri->segment(4)) {
+        if ($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER)) {
 
             //  Test that there's not an explicit method defined for this request
-            $sExplicitMethod = 'get' . ucfirst($oUri->segment(4));
+            $sExplicitMethod = 'get' . ucfirst($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER));
             if (method_exists($this, $sExplicitMethod)) {
                 return $this->$sExplicitMethod();
             }
@@ -180,7 +187,7 @@ class CrudController extends Base
             $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
             //  If there's a submethod defined, call that
-            $sSubMethod = $oUri->segment(5);
+            $sSubMethod = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER + 1);
             if ($sSubMethod && method_exists($this, $sSubMethod)) {
                 $this->$sSubMethod($oResponse, $oItem);
             } elseif ($sSubMethod && !method_exists($this, $sSubMethod)) {
@@ -267,7 +274,7 @@ class CrudController extends Base
         $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
         //  Test that there's not an explicit method defined for this action
-        $sExplicitMethod = 'post' . ucfirst($oUri->segment(4));
+        $sExplicitMethod = 'post' . ucfirst($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER));
         if (method_exists($this, $sExplicitMethod)) {
             return $this->$sExplicitMethod();
         }
@@ -296,7 +303,7 @@ class CrudController extends Base
         }
 
         //  If there's a submethod defined, verify that the resource is valid and then call the sub method
-        $sSubMethod = $oUri->segment(5);
+        $sSubMethod = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER + 1);
         if (empty($sSubMethod)) {
             throw new ApiException(
                 'A subresource must be specified when posting against an existing item',
@@ -343,7 +350,7 @@ class CrudController extends Base
         $oHttpCodes = Factory::service('HttpCodes');
 
         //  Test that there's not an explicit method defined for this action
-        $sMethod = 'put' . ucfirst($oUri->segment(4));
+        $sMethod = 'put' . ucfirst($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER));
         if (method_exists($this, $sMethod)) {
             return $this->$sMethod();
         }
@@ -351,7 +358,7 @@ class CrudController extends Base
         // --------------------------------------------------------------------------
 
         //  If there's a submethod defined, verify that the resource is valid and then call the sub method
-        $sSubMethod = $oUri->segment(5);
+        $sSubMethod = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER + 1);
         if (!empty($sSubMethod) && !method_exists($this, $sSubMethod)) {
             throw new ApiException(
                 '"' . $sSubMethod . '" is not a valid subresource',
@@ -411,7 +418,7 @@ class CrudController extends Base
         $oHttpCodes = Factory::service('HttpCodes');
 
         //  Test that there's not an explicit method defined for this action
-        $sMethod = 'delete' . ucfirst($oUri->segment(4));
+        $sMethod = 'delete' . ucfirst($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER));
         if (method_exists($this, $sMethod)) {
             return $this->$sMethod();
         }
@@ -419,7 +426,7 @@ class CrudController extends Base
         // --------------------------------------------------------------------------
 
         //  If there's a submethod defined, verify that the resource is valid and then call the sub method
-        $sSubMethod = $oUri->segment(5);
+        $sSubMethod = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER + 1);
         if (!empty($sSubMethod) && !method_exists($this, $sSubMethod)) {
             throw new ApiException(
                 '"' . $sSubMethod . '" is not a valid subresource',
