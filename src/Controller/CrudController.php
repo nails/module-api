@@ -24,7 +24,13 @@ class CrudController extends Base
      *
      * @var string
      */
-    const CONFIG_MODEL_NAME     = '';
+    const CONFIG_MODEL_NAME = '';
+
+    /**
+     * The model's provider
+     *
+     * @var string
+     */
     const CONFIG_MODEL_PROVIDER = '';
 
     /**
@@ -320,11 +326,14 @@ class CrudController extends Base
     // --------------------------------------------------------------------------
 
     /**
-     * Updates an existing resource
+     * Handles PUT requests
      *
      * @param string $sMethod The method being called
+     * @param array  $aData   Any data to apply to the requests
      *
-     * @return array
+     * @return ApiResponse
+     * @throws ApiException
+     * @throws FactoryException
      */
     public function putRemap($sMethod, array $aData = [])
     {
@@ -385,11 +394,14 @@ class CrudController extends Base
     // --------------------------------------------------------------------------
 
     /**
-     * Deletes an existing resource
+     * Handles DELETE requests
      *
      * @param string $sMethod The method being called
+     * @param array  $aData   Any data to apply to the requests
      *
-     * @return array
+     * @return ApiResponse
+     * @throws ApiException
+     * @throws FactoryException
      */
     public function deleteRemap($sMethod, array $aData = [])
     {
