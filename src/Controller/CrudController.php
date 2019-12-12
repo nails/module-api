@@ -477,8 +477,12 @@ class CrudController extends Base
      * @return \Nails\Common\Resource\|false
      * @throws FactoryException
      */
-    protected function lookUpResource($aData = [], $iSegment = 4)
+    protected function lookUpResource($aData = [], $iSegment = null)
     {
+        if ($iSegment === null) {
+            $iSegment = static::CONFIG_URI_SEGMENT_IDENTIFIER;
+        }
+
         /** @var Uri $oUri */
         $oUri        = Factory::service('Uri');
         $sIdentifier = $oUri->segment($iSegment);
