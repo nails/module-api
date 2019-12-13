@@ -14,8 +14,11 @@ namespace Nails\Api\Controller;
 
 // --------------------------------------------------------------------------
 
+use ApiRouter;
 use Nails\Api\Events;
 use Nails\Common\Exception\FactoryException;
+use Nails\Common\Exception\NailsException;
+use Nails\Common\Service\Event;
 use Nails\Common\Service\Input;
 use Nails\Factory;
 
@@ -39,15 +42,24 @@ if (class_exists('\App\Api\Controller\Base')) {
 
 // --------------------------------------------------------------------------
 
+/**
+ * Class Base
+ *
+ * @package Nails\Api\Controller
+ */
 abstract class Base extends BaseMiddle
 {
     /**
      * Require the user be authenticated to use any endpoint
+     *
+     * @var bool
      */
     const REQUIRE_AUTH = false;
 
     /**
      * Require the user's access token to have a particular scope
+     *
+     * @var string
      */
     const REQUIRE_SCOPE = null;
 
@@ -56,20 +68,26 @@ abstract class Base extends BaseMiddle
     /**
      * The Api Router instance
      *
-     * @var \ApiRouter
+     * @var ApiRouter
      */
     protected $oApiRouter;
 
     // --------------------------------------------------------------------------
 
     /**
-     * Construct the controller, load all the admin assets, etc
+     * Base constructor.
+     *
+     * @param ApiRouter $oApiRouter The ApiRouter controller
+     *
+     * @throws FactoryException
+     * @throws NailsException
+     * @throws \ReflectionException
      */
-    public function __construct($oApiRouter)
+    public function __construct(ApiRouter $oApiRouter)
     {
         parent::__construct();
 
-        //  Setup Events
+        /** @var Event $oEventService */
         $oEventService = Factory::service('Event');
 
         //  Call the API:STARTUP event, API is constructing
@@ -105,7 +123,7 @@ abstract class Base extends BaseMiddle
      * @param string $sHttpMethod The HTTP Method protocol being used
      * @param string $sMethod     The controller method being executed
      *
-     * @return boolean/array       Boolean true or false. Can also return an array
+     * @return bool|array       Boolean true or false. Can also return an array
      *                             with two elements (status and error) which
      *                             will customise the response code and message.
      */
