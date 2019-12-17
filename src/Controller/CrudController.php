@@ -284,7 +284,7 @@ class CrudController extends Base
             //  No method is being called, create a new item
             $this->userCan(static::ACTION_CREATE);
 
-            $aData   = $this->getPostedData();
+            $aData   = $this->getRequestData();
             $aData   = $this->validateUserInput($aData);
             $iItemId = $this->oModel->create($aData);
 
@@ -383,7 +383,7 @@ class CrudController extends Base
             $this->userCan(static::ACTION_UPDATE);
 
             //  Read from php:://input as using PUT; expecting a JSONobject as the payload
-            $aData = $this->getPostedData();
+            $aData = $this->getRequestData();
             $aData = $this->validateUserInput($aData, $oItem);
 
             if (!$this->oModel->update($oItem->id, $aData)) {
@@ -658,22 +658,11 @@ class CrudController extends Base
      *
      * @return array
      * @throws FactoryException
+     * @deprecated
      */
     protected function getPostedData(): array
     {
-        /**
-         * First check the $_POST superglobal, if that's empty then fall back to
-         * the body of the request assuming it is JSON.
-         */
-        /** @var Input $oInput */
-        $oInput = Factory::service('Input');
-        $aData  = $oInput->post();
-
-        if (empty($aData)) {
-            $sData = stream_get_contents(fopen('php://input', 'r'));
-            $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
-        }
-
-        return $aData;
+        deprecatedError(__METHOD__, 'Base::getRequestData');
+        return parent::getRequestData();
     }
 }
