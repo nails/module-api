@@ -2,15 +2,19 @@
 
 namespace Nails\Api\Controller;
 
+use ApiRouter;
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\FactoryException;
+use Nails\Common\Exception\ModelException;
 use Nails\Common\Exception\NailsException;
+use Nails\Common\Exception\ValidationException;use Nails\Common\Resource;
 use Nails\Common\Service\FormValidation;
 use Nails\Common\Service\HttpCodes;
 use Nails\Common\Service\Input;
 use Nails\Common\Service\Uri;
 use Nails\Factory;
+use ReflectionException;
 
 /**
  * Class CrudController
@@ -57,7 +61,7 @@ class CrudController extends Base
     /**
      * The $_GET parameter with the ID restrictions in it
      *
-     * @var strong
+     * @var string
      */
     const CONFIG_IDS_PARAM = 'ids';
 
@@ -87,6 +91,7 @@ class CrudController extends Base
      *
      * @var string
      */
+    const ACTION_LIST   = 'LIST';
     const ACTION_CREATE = 'CREATE';
     const ACTION_READ   = 'READ';
     const ACTION_UPDATE = 'UPDATE';
@@ -123,8 +128,11 @@ class CrudController extends Base
     /**
      * CrudController constructor.
      *
-     * @param \ApiRouter $oApiRouter the ApiRouter object
+     * @param ApiRouter $oApiRouter the ApiRouter object
      *
+     * @throws ApiException
+     * @throws FactoryException
+     * @throws ReflectionException
      * @throws NailsException
      */
     public function __construct($oApiRouter)
@@ -132,10 +140,10 @@ class CrudController extends Base
         parent::__construct($oApiRouter);
 
         if (empty(static::CONFIG_MODEL_NAME)) {
-            throw new NailsException('"static::CONFIG_MODEL_NAME" is required.');
+            throw new ApiException('"static::CONFIG_MODEL_NAME" is required.');
         }
         if (empty(static::CONFIG_MODEL_PROVIDER)) {
-            throw new NailsException('"static::CONFIG_MODEL_PROVIDER" is required.');
+            throw new ApiException('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
 
         /** @var \Nails\Common\Model\Base oModel */
@@ -146,7 +154,11 @@ class CrudController extends Base
 
     }
 
-    // --------------------------------------------------------------------------
+    /** -------------------------------------------------------------------------
+     * ROUTING METHODS
+     * The following methods route requests to the appropriate CRUD method
+     * --------------------------------------------------------------------------
+     */
 
     /**
      * Handles GET requests
@@ -157,13 +169,12 @@ class CrudController extends Base
      * @return ApiResponse
      * @throws ApiException
      * @throws FactoryException
+     * @throws ModelException
      */
     public function getRemap($sMethod, array $aData = [])
     {
         /** @var Uri $oUri */
         $oUri = Factory::service('Uri');
-        /** @var HttpCodes $oHttpCodes */
-        $oHttpCodes = Factory::service('HttpCodes');
 
         if ($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER)) {
 
@@ -173,81 +184,11 @@ class CrudController extends Base
                 return $this->$sExplicitMethod();
             }
 
-            $aData = $this->getLookupData(static::ACTION_READ, $aData);
-            $oItem = $this->lookUpResource($aData);
-            if (!$oItem) {
-                throw new ApiException(
-                    'Resource not found',
-                    $oHttpCodes::STATUS_NOT_FOUND
-                );
-            }
-
-            $this->userCan(static::ACTION_READ, $oItem);
-            /** @var ApiResponse $oResponse */
-            $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
-
-            //  If there's a submethod defined, call that
-            $sSubMethod = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER + 1);
-            if ($sSubMethod && method_exists($this, $sSubMethod)) {
-                $this->$sSubMethod($oResponse, $oItem);
-            } elseif ($sSubMethod && !method_exists($this, $sSubMethod)) {
-                throw new ApiException(
-                    '"' . $sSubMethod . '" is not a valid subresource',
-                    $oHttpCodes::STATUS_NOT_FOUND
-                );
-            } else {
-                $oResponse->setData($this->formatObject($oItem));
-            }
+            return $this->read($aData);
 
         } else {
-
-            $this->userCan(static::ACTION_READ);
-
-            /** @var Input $oInput */
-            $oInput = Factory::service('Input');
-            $aData  = $this->getLookupData(static::ACTION_READ, $aData);
-
-            //  Paging
-            $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
-            $iPage = $iPage < 0 ? $iPage * -1 : $iPage;
-
-            //  Searching
-            if ($oInput->get(static::CONFIG_SEARCH_PARAM)) {
-                $aData['keywords'] = $oInput->get(static::CONFIG_SEARCH_PARAM);
-            }
-
-            // Requesting specific IDs
-            if ($oInput->get(static::CONFIG_IDS_PARAM)) {
-                $aData['where_in'] = [
-                    [$this->oModel->getcolumn('id'), explode(',', $oInput->get(static::CONFIG_IDS_PARAM))],
-                ];
-            }
-
-            $iTotal   = $this->oModel->countAll($aData);
-            $aResults = array_map(
-                [$this, 'formatObject'],
-                $this->oModel->getAll(
-                    $iPage,
-                    static::CONFIG_PER_PAGE,
-                    $aData
-                )
-            );
-
-            /** @var ApiResponse $oResponse */
-            $oResponse = Factory::factory('ApiResponse', 'nails/module-api')
-                ->setData($aResults)
-                ->setMeta([
-                    'pagination' => [
-                        'page'     => $iPage,
-                        'per_page' => static::CONFIG_PER_PAGE,
-                        'total'    => $iTotal,
-                        'previous' => $this->buildUrl($iTotal, $iPage, -1),
-                        'next'     => $this->buildUrl($iTotal, $iPage, 1),
-                    ],
-                ]);
+            return $this->list($aData);
         }
-
-        return $oResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -261,6 +202,8 @@ class CrudController extends Base
      * @return ApiResponse
      * @throws ApiException
      * @throws FactoryException
+     * @throws ModelException
+     * @throws ValidationException
      */
     public function postRemap($sMethod, array $aData = [])
     {
@@ -270,8 +213,6 @@ class CrudController extends Base
         $oHttpCodes = Factory::service('HttpCodes');
         /** @var Uri $oUri */
         $oUri = Factory::service('Uri');
-        /** @var ApiResponse $oResponse */
-        $oResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
         //  Test that there's not an explicit method defined for this action
         $sExplicitMethod = 'post' . ucfirst($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER));
@@ -280,26 +221,7 @@ class CrudController extends Base
         }
 
         if (empty($sMethod) || $sMethod === 'index') {
-
-            //  No method is being called, create a new item
-            $this->userCan(static::ACTION_CREATE);
-
-            $aData   = $this->getRequestData();
-            $aData   = $this->validateUserInput($aData);
-            $iItemId = $this->oModel->create($aData);
-
-            if (empty($iItemId)) {
-                throw new ApiException(
-                    'Failed to create resource. ' . $this->oModel->lastError(),
-                    $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
-                );
-            }
-
-            $aData = $this->getLookupData(static::ACTION_READ, $aData);
-            $oItem = $this->oModel->getById($iItemId, $aData);
-            $oResponse->setData($this->formatObject($oItem));
-
-            return $oResponse;
+            return $this->create();
         }
 
         //  If there's a submethod defined, verify that the resource is valid and then call the sub method
@@ -325,9 +247,12 @@ class CrudController extends Base
             );
         }
 
-        $this->$sSubMethod($oResponse, $oItem);
+        /** @var ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
-        return $oResponse;
+        $this->$sSubMethod($oApiResponse, $oItem);
+
+        return $oApiResponse;
     }
 
     // --------------------------------------------------------------------------
@@ -341,6 +266,8 @@ class CrudController extends Base
      * @return ApiResponse
      * @throws ApiException
      * @throws FactoryException
+     * @throws ModelException
+     * @throws ValidationException
      */
     public function putRemap($sMethod, array $aData = [])
     {
@@ -368,6 +295,7 @@ class CrudController extends Base
 
         $aData = $this->getLookupData(static::ACTION_UPDATE, $aData);
         $oItem = $this->lookUpResource($aData);
+
         if (!$oItem) {
             throw new ApiException(
                 'Resource not found',
@@ -379,20 +307,7 @@ class CrudController extends Base
         $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
         if (empty($sSubMethod)) {
-
-            $this->userCan(static::ACTION_UPDATE);
-
-            //  Read from php:://input as using PUT; expecting a JSONobject as the payload
-            $aData = $this->getRequestData();
-            $aData = $this->validateUserInput($aData, $oItem);
-
-            if (!$this->oModel->update($oItem->id, $aData)) {
-                throw new ApiException(
-                    'Failed to update resource. ' . $this->oModel->lastError(),
-                    $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
-                );
-            }
-
+            $this->update($oApiResponse, $oItem);
         } else {
             $this->$sSubMethod($oApiResponse, $oItem);
         }
@@ -411,6 +326,7 @@ class CrudController extends Base
      * @return ApiResponse
      * @throws ApiException
      * @throws FactoryException
+     * @throws ModelException
      */
     public function deleteRemap($sMethod, array $aData = [])
     {
@@ -449,18 +365,162 @@ class CrudController extends Base
         $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
 
         if (empty($sSubMethod)) {
-
-            $this->userCan(static::ACTION_DELETE, $oItem);
-
-            if (!$this->oModel->delete($oItem->id)) {
-                throw new ApiException(
-                    'Failed to delete resource. ' . $this->oModel->lastError(),
-                    $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
-                );
-            }
-
+            $this->delete($oApiResponse, $oItem);
         } else {
             $this->$sSubMethod($oApiResponse, $oItem);
+        }
+
+        return $oApiResponse;
+    }
+
+    /** -------------------------------------------------------------------------
+     * CRUD METHODS
+     * The following methods provide (C)reate (R)ead (U)pdate and (D)elete
+     * functionality, as well as a listing method for browsing resources.
+     * --------------------------------------------------------------------------
+     */
+
+    /**
+     * Lists resources in a paginated fashion
+     *
+     * @param array $aData Any data to apply to the requests
+     *
+     * @return ApiResponse
+     * @throws FactoryException
+     * @throws ModelException
+     */
+    protected function list(array $aData = []): ApiResponse
+    {
+        $this->userCan(static::ACTION_LIST);
+
+        /** @var Input $oInput */
+        $oInput = Factory::service('Input');
+        $aData  = $this->getLookupData(static::ACTION_READ, $aData);
+
+        //  Paging
+        $iPage = (int) $oInput->get(static::CONFIG_PAGE_PARAM) ?: 1;
+        $iPage = $iPage < 0 ? $iPage * -1 : $iPage;
+
+        //  Searching
+        if ($oInput->get(static::CONFIG_SEARCH_PARAM)) {
+            $aData['keywords'] = $oInput->get(static::CONFIG_SEARCH_PARAM);
+        }
+
+        // Requesting specific IDs
+        if ($oInput->get(static::CONFIG_IDS_PARAM)) {
+            $aData['where_in'] = [
+                [$this->oModel->getcolumn('id'), explode(',', $oInput->get(static::CONFIG_IDS_PARAM))],
+            ];
+        }
+
+        $iTotal   = $this->oModel->countAll($aData);
+        $aResults = array_map(
+            [$this, 'formatObject'],
+            $this->oModel->getAll(
+                $iPage,
+                static::CONFIG_PER_PAGE,
+                $aData
+            )
+        );
+
+        /** @var ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api')
+            ->setData($aResults)
+            ->setMeta([
+                'pagination' => [
+                    'page'     => $iPage,
+                    'per_page' => static::CONFIG_PER_PAGE,
+                    'total'    => $iTotal,
+                    'previous' => $this->buildUrl($iTotal, $iPage, -1),
+                    'next'     => $this->buildUrl($iTotal, $iPage, 1),
+                ],
+            ]);
+
+        return $oApiResponse;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Creates a new resource
+     *
+     * @return ApiResponse
+     * @throws ApiException
+     * @throws FactoryException
+     * @throws ModelException
+     * @throws ValidationException
+     */
+    protected function create(): ApiResponse
+    {
+        $this->userCan(static::ACTION_CREATE);
+
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+        /** @var ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
+
+        $aData   = $this->getRequestData();
+        $aData   = $this->validateUserInput($aData);
+        $iItemId = $this->oModel->create($aData);
+
+        if (empty($iItemId)) {
+            throw new ApiException(
+                'Failed to create resource. ' . $this->oModel->lastError(),
+                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+
+        $aData = $this->getLookupData(static::ACTION_READ, $aData);
+        /** @var Resource\Entity $oItem */
+        $oItem = $this->oModel->getById($iItemId, $aData);
+        $oApiResponse->setData($this->formatObject($oItem));
+
+        return $oApiResponse;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns a single resource
+     *
+     * @param array $aData Any data to apply to the requests
+     *
+     * @return ApiResponse
+     * @throws ApiException
+     * @throws FactoryException
+     * @throws ModelException
+     */
+    protected function read(array $aData = []): ApiResponse
+    {
+        /** @var Uri $oUri */
+        $oUri = Factory::service('Uri');
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+
+        $aData = $this->getLookupData(static::ACTION_READ, $aData);
+        $oItem = $this->lookUpResource($aData);
+        if (!$oItem) {
+            throw new ApiException(
+                'Resource not found',
+                $oHttpCodes::STATUS_NOT_FOUND
+            );
+        }
+
+        $this->userCan(static::ACTION_READ, $oItem);
+        /** @var ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
+
+        //  If there's a submethod defined, call that
+        $sSubMethod = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER + 1);
+        if ($sSubMethod && method_exists($this, $sSubMethod)) {
+            $this->$sSubMethod($oApiResponse, $oItem);
+        } elseif ($sSubMethod && !method_exists($this, $sSubMethod)) {
+            throw new ApiException(
+                '"' . $sSubMethod . '" is not a valid subresource',
+                $oHttpCodes::STATUS_NOT_FOUND
+            );
+        } else {
+            $oApiResponse->setData($this->formatObject($oItem));
         }
 
         return $oApiResponse;
@@ -469,15 +529,80 @@ class CrudController extends Base
     // --------------------------------------------------------------------------
 
     /**
+     * Updates an existing resource
+     *
+     * @param ApiResponse     $oApiResponse The API Response
+     * @param Resource\Entity $oItem        The item resource being updated
+     *
+     * @throws ApiException
+     * @throws FactoryException
+     * @throws ModelException
+     * @throws ValidationException
+     */
+    protected function update(ApiResponse $oApiResponse, Resource\Entity $oItem): void
+    {
+        $this->userCan(static::ACTION_UPDATE, $oItem);
+
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+
+        //  Read from php:://input as using PUT; expecting a JSON object as the payload
+        $aData = $this->getRequestData();
+        $aData = $this->validateUserInput($aData, $oItem);
+
+        if (!$this->oModel->update($oItem->id, $aData)) {
+            throw new ApiException(
+                'Failed to update resource. ' . $this->oModel->lastError(),
+                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Deletes an existing resource
+     *
+     * @param ApiResponse      $oApiResponse The API Response
+     * @param Resource\Entity  $oItem        The item resource being updated
+     *
+     * @throws ApiException
+     * @throws FactoryException
+     * @throws ModelException
+     */
+    protected function delete(ApiResponse $oApiResponse, Resource\Entity $oItem): void
+    {
+        $this->userCan(static::ACTION_DELETE, $oItem);
+
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+
+        if (!$this->oModel->delete($oItem->id)) {
+            throw new ApiException(
+                'Failed to delete resource. ' . $this->oModel->lastError(),
+                $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /** -------------------------------------------------------------------------
+     * UTILITY METHODS
+     * The following methods are utility methods which provide additional bits
+     * of functionality and/or hooks for overloading code.
+     * --------------------------------------------------------------------------
+     */
+
+    /**
      * Fetches an object by it's ID, SLUG, or TOKEN
      *
      * @param array $aData    Any data to pass to the lookup
      * @param int   $iSegment The segment containing the item's ID/Token/Slug
      *
-     * @return \Nails\Common\Resource\|false
+     * @return Resource\Entity|null
      * @throws FactoryException
+     * @throws ModelException
      */
-    protected function lookUpResource($aData = [], $iSegment = null)
+    protected function lookUpResource($aData = [], $iSegment = null): ?Resource\Entity
     {
         if ($iSegment === null) {
             $iSegment = static::CONFIG_URI_SEGMENT_IDENTIFIER;
@@ -501,15 +626,18 @@ class CrudController extends Base
 
         switch (static::CONFIG_LOOKUP_METHOD) {
             case 'ID':
-                return $this->oModel->getById($sIdentifier, $aData);
+                $oItem = $this->oModel->getById($sIdentifier, $aData);
                 break;
             case 'SLUG':
-                return $this->oModel->getBySlug($sIdentifier, $aData);
+                $oItem = $this->oModel->getBySlug($sIdentifier, $aData);
                 break;
             case 'TOKEN':
-                return $this->oModel->getByToken($sIdentifier, $aData);
+                $oItem = $this->oModel->getByToken($sIdentifier, $aData);
                 break;
         }
+
+        /** @var Resource\Entity $oItem */
+        return $oItem;
     }
 
     // --------------------------------------------------------------------------
@@ -533,14 +661,15 @@ class CrudController extends Base
     /**
      * Validates a user can perform this action
      *
-     * @param string    $sAction The action being performed
-     * @param \stdClass $oItem   The item the action is being performed against
-     *
-     * @throws ApiException
+     * @param string          $sAction The action being performed
+     * @param Resource\Entity $oItem   The item the action is being performed against
      */
-    protected function userCan($sAction, $oItem = null)
+    protected function userCan($sAction, Resource\Entity $oItem = null)
     {
-        //  By default users can perform any action, apply restrictions by overloading this method
+        /**
+         * By default users can perform any action, apply restrictions by
+         * overloading this method and throwing a ValidationException.
+         */
     }
 
     // --------------------------------------------------------------------------
@@ -548,13 +677,14 @@ class CrudController extends Base
     /**
      * Validates user input
      *
-     * @param array     $aData The user data to validate
-     * @param \stdClass $oItem The current object (when editing)
+     * @param array           $aData The user data to validate
+     * @param Resource\Entity $oItem The current object (when editing)
      *
      * @return array
-     * @throws ApiException;
+     * @throws FactoryException
+     * @throws ValidationException
      */
-    protected function validateUserInput($aData, $oItem = null)
+    protected function validateUserInput($aData, Resource\Entity $oItem = null)
     {
         $aOut    = [];
         $aFields = $this->oModel->describeFields();
@@ -601,6 +731,7 @@ class CrudController extends Base
      * @param int $iPageOffset The offset to the page number
      *
      * @return null|string
+     * @throws FactoryException
      */
     protected function buildUrl($iTotal, $iPage, $iPageOffset)
     {
@@ -639,11 +770,11 @@ class CrudController extends Base
     /**
      * Formats an object
      *
-     * @param \stdClass $oObj The object to format
+     * @param Resource\Entity $oObj The object to format
      *
-     * @return \stdClass
+     * @return Resource\Entity
      */
-    protected function formatObject($oObj)
+    protected function formatObject(Resource\Entity $oObj)
     {
         foreach (static::IGNORE_FIELDS_READ as $sIgnoredField) {
             unset($oObj->{$sIgnoredField});
