@@ -28,6 +28,7 @@
     "require":
     {
         "nails/common": "dev-develop",
+        "nails/module-auth": "dev-develop",
         "nails/module-console": "dev-develop"
     },
     "require-dev":
