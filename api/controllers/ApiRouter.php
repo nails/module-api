@@ -11,6 +11,7 @@
  */
 
 use Nails\Auth;
+use Nails\Api\Constants;
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\NailsException;
@@ -226,8 +227,8 @@ class ApiRouter extends BaseMiddle
                     ],
                 ];
                 foreach (Components::modules() as $oModule) {
-                    if (!empty($oModule->data->{'nails/module-api'}->namespace)) {
-                        $sNamespace = $oModule->data->{'nails/module-api'}->namespace;
+                    if (!empty($oModule->data->{Api\Constants::MODULE_SLUG}->namespace)) {
+                        $sNamespace = $oModule->data->{Api\Constants::MODULE_SLUG}->namespace;
                         if (array_key_exists($sNamespace, $aNamespaces)) {
                             throw new NailsException(
                                 'Conflicting API namespace "' . $sNamespace . '" in use by ' .
@@ -249,9 +250,9 @@ class ApiRouter extends BaseMiddle
                 $sOriginalController = $this->sClassName;
 
                 //  Do we need to remap the controller?
-                if (!empty($oNamespace->data->{'nails/module-api'}->{'controller-map'})) {
+                if (!empty($oNamespace->data->{Api\Constants::MODULE_SLUG}->{'controller-map'})) {
 
-                    $aMap             = (array) $oNamespace->data->{'nails/module-api'}->{'controller-map'};
+                    $aMap             = (array) $oNamespace->data->{Api\Constants::MODULE_SLUG}->{'controller-map'};
                     $this->sClassName = getFromArray($this->sClassName, $aMap, $this->sClassName);
 
                     //  This prevents users from accessing the "correct" controller, so we only have one valid route

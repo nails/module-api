@@ -17,25 +17,24 @@ return <<<'EOD'
 
 namespace App\Api\Controller;
 
-use Nails\Api\Controller\Base;
-use Nails\Api\Factory\ApiResponse;
+use Nails\Api;
 use Nails\Common\Exception\FactoryException;
 use Nails\Factory;
 
-class {{CLASS_NAME}} extends Base
+class {{CLASS_NAME}} extends Api\Controller\Base
 {
     /**
      * GET: /api/app/{{CLASS_NAME}}
      *
-     * @return ApiResponse
+     * @return Api\Factory\ApiResponse
      * @throws FactoryException
      */
-    public function getIndex(): ApiResponse
+    public function getIndex(): Api\Factory\ApiResponse
     {
         // @todo - update this stub
 
-        /** @var ApiResponse $oApiResponse */
-        $oApiResponse = Factory::factory('ApiResponse', 'nails/module-api');
+        /** @var Api\Factory\ApiResponse $oApiResponse */
+        $oApiResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
         $oApiResponse->setData(['foo' => 'bar']);
 
         return $oApiResponse;
