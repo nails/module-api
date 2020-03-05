@@ -249,7 +249,7 @@ class CrudController extends Base
         }
 
         /** @var ApiResponse $oApiResponse */
-        $oApiResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oApiResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
 
         $this->$sSubMethod($oApiResponse, $oItem);
 
@@ -305,7 +305,7 @@ class CrudController extends Base
         }
 
         /** @var ApiResponse $oApiResponse */
-        $oApiResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oApiResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
 
         if (empty($sSubMethod)) {
             $this->update($oApiResponse, $oItem);
@@ -363,7 +363,7 @@ class CrudController extends Base
         }
 
         /** @var ApiResponse $oApiResponse */
-        $oApiResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oApiResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
 
         if (empty($sSubMethod)) {
             $this->delete($oApiResponse, $oItem);
@@ -425,7 +425,7 @@ class CrudController extends Base
         );
 
         /** @var ApiResponse $oApiResponse */
-        $oApiResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG)
+        $oApiResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG)
             ->setData($aResults)
             ->setMeta([
                 'pagination' => [
@@ -458,7 +458,7 @@ class CrudController extends Base
         /** @var HttpCodes $oHttpCodes */
         $oHttpCodes = Factory::service('HttpCodes');
         /** @var ApiResponse $oApiResponse */
-        $oApiResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oApiResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
 
         $aData   = $this->getRequestData();
         $aData   = $this->validateUserInput($aData);
@@ -509,7 +509,7 @@ class CrudController extends Base
 
         $this->userCan(static::ACTION_READ, $oItem);
         /** @var ApiResponse $oApiResponse */
-        $oApiResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oApiResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
 
         //  If there's a submethod defined, call that
         $sSubMethod = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER + 1);

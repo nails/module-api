@@ -102,7 +102,7 @@ class DefaultController extends Base
         );
 
         //  @todo (Pablo - 2018-06-24) - Paging
-        $oResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData(array_map([$this, 'formatObject'], $aResults));
         return $oResponse;
     }
@@ -154,7 +154,7 @@ class DefaultController extends Base
             $mData = array_map([$this, 'formatObject'], $aResults);
         }
 
-        $oResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData($mData);
         return $oResponse;
     }
@@ -193,7 +193,7 @@ class DefaultController extends Base
             $aData
         );
 
-        $oResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData(array_map([$this, 'formatObject'], $oResult->data));
         return $oResponse;
     }
@@ -269,7 +269,7 @@ class DefaultController extends Base
             $oItem = $oItemModel->create($aPost, true);
         }
 
-        $oResponse = Factory::factory('ApiResponse', Api\Constants::MODULE_SLUG);
+        $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData($this->formatObject($oItem));
         return $oResponse;
     }
