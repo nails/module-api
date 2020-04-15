@@ -17,6 +17,9 @@ use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\ValidationException;
 use Nails\Common\Factory\Logger;
+use Nails\Common\Service\HttpCodes;
+use Nails\Common\Service\Input;
+use Nails\Common\Service\Output;
 use Nails\Components;
 use Nails\Environment;
 use Nails\Factory;
@@ -76,14 +79,31 @@ class ApiRouter extends BaseMiddle
 
     // --------------------------------------------------------------------------
 
+    /** @var string */
     private $sRequestMethod;
+
+    /** @var string */
     private $sModuleName;
+
+    /** @var string */
     private $sClassName;
+
+    /** @var string */
     private $sMethod;
+
+    /** @var array */
     private $aOutputValidFormats;
+
+    /** @var string */
     private $sOutputFormat;
+
+    /** @var bool */
     private $bOutputSendHeader;
+
+    /** @var Logger */
     private $oLogger;
+
+    /** @var string */
     private $sAccessToken;
 
     // --------------------------------------------------------------------------
@@ -105,6 +125,7 @@ class ApiRouter extends BaseMiddle
         // --------------------------------------------------------------------------
 
         //  Work out the request method
+        /** @var Input $oInput */
         $oInput               = Factory::service('Input');
         $this->sRequestMethod = $oInput->server('REQUEST_METHOD');
         $this->sRequestMethod = $this->sRequestMethod ? $this->sRequestMethod : static::REQUEST_METHOD_GET;
@@ -158,7 +179,7 @@ class ApiRouter extends BaseMiddle
         //  Handle OPTIONS CORS pre-flight requests
         if ($this->sRequestMethod === static::REQUEST_METHOD_OPTIONS) {
 
-            /** @var \Nails\Common\Service\Output $oOutput */
+            /** @var Output $oOutput */
             $oOutput = Factory::service('Output');
             $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
             $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
@@ -175,13 +196,12 @@ class ApiRouter extends BaseMiddle
                  * and POST arrays.
                  */
 
-                /** @var \Nails\Common\Service\Input $oInput */
+                /** @var Input $oInput */
                 $oInput = Factory::service('Input');
-                /** @var \Nails\Common\Service\HttpCodes $oHttpCodes */
+                /** @var HttpCodes $oHttpCodes */
                 $oHttpCodes = Factory::service('HttpCodes');
                 /** @var Auth\Model\User\AccessToken $oUserAccessTokenModel */
                 $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
-
 
                 $sAccessToken = $oInput->header(static::ACCESS_TOKEN_HEADER);
 
@@ -437,11 +457,11 @@ class ApiRouter extends BaseMiddle
      */
     protected function output($aOut = [])
     {
-        /** @var \Nails\Common\Service\Input $oInput */
+        /** @var Input $oInput */
         $oInput = Factory::service('Input');
-        /** @var \Nails\Common\Service\Output $oOutput */
+        /** @var Output $oOutput */
         $oOutput = Factory::service('Output');
-        /** @var \Nails\Common\Service\HttpCodes $oHttpCodes */
+        /** @var HttpCodes $oHttpCodes */
         $oHttpCodes = Factory::service('HttpCodes');
 
         //  Set cache headers
@@ -492,7 +512,7 @@ class ApiRouter extends BaseMiddle
      */
     private function outputTxt($aOut)
     {
-        /** @var \Nails\Common\Service\Output $oOutput */
+        /** @var Output $oOutput */
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('text/html');
         if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
@@ -513,7 +533,7 @@ class ApiRouter extends BaseMiddle
      */
     private function outputJson($aOut)
     {
-        /** @var \Nails\Common\Service\Output $oOutput */
+        /** @var Output $oOutput */
         $oOutput = Factory::service('Output');
         $oOutput->set_content_type('application/json');
         if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
