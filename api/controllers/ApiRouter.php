@@ -16,6 +16,7 @@ use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\ValidationException;
+use Nails\Common\Factory\Logger;
 use Nails\Components;
 use Nails\Environment;
 use Nails\Factory;
@@ -129,8 +130,8 @@ class ApiRouter extends BaseMiddle
 
         //  Configure logging
         $oNow          = Factory::factory('DateTime');
-        $this->oLogger = Factory::service('Logger');
         $this->oLogger->setFile('api-' . $oNow->format('y-m-d') . '.php');
+        $this->oLogger = Factory::factory('Logger');
     }
 
     // --------------------------------------------------------------------------
