@@ -46,36 +46,38 @@ if (class_exists('\App\Api\Controller\BaseRouter')) {
  */
 class ApiRouter extends BaseMiddle
 {
-    const FORMAT_JSON                  = 'JSON';
-    const FORMAT_TXT                   = 'TXT';
-    const DEFAULT_FORMAT               = 'JSON';
-    const REQUEST_METHOD_GET           = 'GET';
-    const REQUEST_METHOD_PUT           = 'PUT';
-    const REQUEST_METHOD_POST          = 'POST';
-    const REQUEST_METHOD_DELETE        = 'DELETE';
-    const REQUEST_METHOD_OPTIONS       = 'OPTIONS';
-    const VALID_FORMATS                = [
+    const FORMAT_JSON                      = 'JSON';
+    const FORMAT_TXT                       = 'TXT';
+    const DEFAULT_FORMAT                   = 'JSON';
+    const REQUEST_METHOD_GET               = 'GET';
+    const REQUEST_METHOD_PUT               = 'PUT';
+    const REQUEST_METHOD_POST              = 'POST';
+    const REQUEST_METHOD_DELETE            = 'DELETE';
+    const REQUEST_METHOD_OPTIONS           = 'OPTIONS';
+    const VALID_FORMATS                    = [
         self::FORMAT_TXT,
         self::FORMAT_JSON,
     ];
-    const ACCESS_TOKEN_HEADER          = 'X-Access-Token';
-    const ACCESS_TOKEN_POST_PARAM      = 'accessToken';
-    const ACCESS_TOKEN_GET_PARAM       = 'accessToken';
-    const ACCESS_CONTROL_ALLOW_ORIGIN  = '*';
-    const ACCESS_CONTROL_ALLOW_HEADERS = [
+    const ACCESS_TOKEN_HEADER              = 'X-Access-Token';
+    const ACCESS_TOKEN_POST_PARAM          = 'accessToken';
+    const ACCESS_TOKEN_GET_PARAM           = 'accessToken';
+    const ACCESS_CONTROL_ALLOW_ORIGIN      = '*';
+    const ACCESS_CONTROL_ALLOW_CREDENTIALS = 'true';
+    const ACCESS_CONTROL_MAX_AGE           = 86400;
+    const ACCESS_CONTROL_ALLOW_HEADERS     = [
         self::ACCESS_TOKEN_HEADER,
         'content',
         'origin',
         'content-type',
     ];
-    const ACCESS_CONTROL_ALLOW_METHODS = [
+    const ACCESS_CONTROL_ALLOW_METHODS     = [
         self::REQUEST_METHOD_GET,
         self::REQUEST_METHOD_PUT,
         self::REQUEST_METHOD_POST,
         self::REQUEST_METHOD_DELETE,
         self::REQUEST_METHOD_OPTIONS,
     ];
-    const OUTPUT_FORMAT_PATTERN        = '/\.([a-z]*)$/';
+    const OUTPUT_FORMAT_PATTERN            = '/\.([a-z]*)$/';
 
     // --------------------------------------------------------------------------
 
@@ -179,11 +181,10 @@ class ApiRouter extends BaseMiddle
         //  Handle OPTIONS CORS pre-flight requests
         if ($this->sRequestMethod === static::REQUEST_METHOD_OPTIONS) {
 
+            $this->setCorsHeaders();
             /** @var Output $oOutput */
             $oOutput = Factory::service('Output');
-            $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
-            $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
-            $oOutput->set_header('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS));
+            $oOutput->set_status_header(HttpCodes::STATUS_NO_CONTENT);
             return;
 
         } else {
@@ -470,9 +471,7 @@ class ApiRouter extends BaseMiddle
         $oOutput->set_header('Pragma: no-cache');
 
         //  Set access control headers
-        $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
-        $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
-        $oOutput->set_header('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS));
+        $this->setCorsHeaders();
 
         // --------------------------------------------------------------------------
 
@@ -498,6 +497,24 @@ class ApiRouter extends BaseMiddle
         }
 
         $oOutput->set_output($sOut);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Sets CORS headers
+     *
+     * @throws \Nails\Common\Exception\FactoryException
+     */
+    protected function setCorsHeaders()
+    {
+        /** @var Output $oOutput */
+        $oOutput = Factory::service('Output');
+        $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
+        $oOutput->set_header('Access-Control-Allow-Credentials: ' . static::ACCESS_CONTROL_ALLOW_CREDENTIALS);
+        $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
+        $oOutput->set_header('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS));
+        $oOutput->set_header('Access-Control-Max-Age: ' . static::ACCESS_CONTROL_MAX_AGE);
     }
 
     // --------------------------------------------------------------------------
