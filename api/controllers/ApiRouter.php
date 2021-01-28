@@ -65,12 +65,7 @@ class ApiRouter extends BaseMiddle
     const ACCESS_CONTROL_ALLOW_ORIGIN      = '*';
     const ACCESS_CONTROL_ALLOW_CREDENTIALS = 'true';
     const ACCESS_CONTROL_MAX_AGE           = 86400;
-    const ACCESS_CONTROL_ALLOW_HEADERS     = [
-        self::ACCESS_TOKEN_HEADER,
-        'content',
-        'origin',
-        'content-type',
-    ];
+    const ACCESS_CONTROL_ALLOW_HEADERS     = ['*'];
     const ACCESS_CONTROL_ALLOW_METHODS     = [
         self::REQUEST_METHOD_GET,
         self::REQUEST_METHOD_PUT,
