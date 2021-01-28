@@ -148,7 +148,9 @@ class ApiRouter extends BaseMiddle
         $this->sMethod     = getFromArray(2, $aUri, 'index');
 
         //  Configure logging
-        $oNow          = Factory::factory('DateTime');
+        /** @var \Nails\Common\Resource\DateTime $oNow */
+        $oNow = Factory::factory('DateTime');
+        /** @var Logger oLogger */
         $this->oLogger = Factory::factory('Logger');
         $this->oLogger->setFile('api-' . $oNow->format('Y-m-d') . '.php');
     }
