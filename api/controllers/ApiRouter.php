@@ -16,6 +16,7 @@ use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
 use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\ValidationException;
+use Nails\Common\Factory\HttpRequest;
 use Nails\Common\Factory\Logger;
 use Nails\Common\Service\HttpCodes;
 use Nails\Common\Service\Input;
@@ -48,12 +49,12 @@ class ApiRouter extends BaseMiddle
 {
     const FORMAT_JSON                      = 'JSON';
     const FORMAT_TXT                       = 'TXT';
-    const DEFAULT_FORMAT                   = 'JSON';
-    const REQUEST_METHOD_GET               = 'GET';
-    const REQUEST_METHOD_PUT               = 'PUT';
-    const REQUEST_METHOD_POST              = 'POST';
-    const REQUEST_METHOD_DELETE            = 'DELETE';
-    const REQUEST_METHOD_OPTIONS           = 'OPTIONS';
+    const DEFAULT_FORMAT                   = self::FORMAT_JSON;
+    const REQUEST_METHOD_GET               = HttpRequest\Get::HTTP_METHOD;
+    const REQUEST_METHOD_PUT               = HttpRequest\Put::HTTP_METHOD;
+    const REQUEST_METHOD_POST              = HttpRequest\Post::HTTP_METHOD;
+    const REQUEST_METHOD_DELETE            = HttpRequest\Delete::HTTP_METHOD;
+    const REQUEST_METHOD_OPTIONS           = HttpRequest\Options::HTTP_METHOD;
     const VALID_FORMATS                    = [
         self::FORMAT_TXT,
         self::FORMAT_JSON,
