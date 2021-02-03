@@ -72,7 +72,7 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /** @var array */
-    private static $aOutputValidFormats;
+    protected static $aOutputValidFormats;
 
     // --------------------------------------------------------------------------
 
