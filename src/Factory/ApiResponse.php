@@ -15,6 +15,11 @@ namespace Nails\Api\Factory;
 use Nails\Common\Exception\ValidationException;
 use Nails\Common\Service\HttpCodes;
 
+/**
+ * Class ApiResponse
+ *
+ * @package Nails\Api\Factory
+ */
 class ApiResponse
 {
     /**
@@ -23,6 +28,13 @@ class ApiResponse
      * @var int
      */
     protected $iCode = HttpCodes::STATUS_OK;
+
+    /**
+     * If defined, this will be the exact body of the response
+     *
+     * @var string|null
+     */
+    protected $sBody = null;
 
     /**
      * The payload for the response
@@ -72,6 +84,37 @@ class ApiResponse
     // --------------------------------------------------------------------------
 
     /**
+     * Sets the body value
+     *
+     * @param string $sBody
+     */
+    public function setBody(string $sBody): self
+    {
+        if (!empty($this->mData)) {
+            throw new ValidationException(
+                'Cannot set response body when a data has been set'
+            );
+        }
+
+        $this->sBody = $sBody;
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the body
+     *
+     * @return string|null
+     */
+    public function getBody(): ?string
+    {
+        return $this->sBody;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
      * Set the response payload
      *
      * @param $mData
@@ -80,6 +123,12 @@ class ApiResponse
      */
     public function setData($mData)
     {
+        if ($this->sBody !== null) {
+            throw new ValidationException(
+                'Cannot set response data when a body has been set'
+            );
+        }
+
         $this->mData = $mData;
         return $this;
     }

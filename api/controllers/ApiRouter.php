@@ -47,18 +47,12 @@ if (class_exists('\App\Api\Controller\BaseRouter')) {
  */
 class ApiRouter extends BaseMiddle
 {
-    const FORMAT_JSON                      = 'JSON';
-    const FORMAT_TXT                       = 'TXT';
-    const DEFAULT_FORMAT                   = self::FORMAT_JSON;
+    const DEFAULT_FORMAT                   = \Nails\Api\Api\Output\Json::SLUG;
     const REQUEST_METHOD_GET               = HttpRequest\Get::HTTP_METHOD;
     const REQUEST_METHOD_PUT               = HttpRequest\Put::HTTP_METHOD;
     const REQUEST_METHOD_POST              = HttpRequest\Post::HTTP_METHOD;
     const REQUEST_METHOD_DELETE            = HttpRequest\Delete::HTTP_METHOD;
     const REQUEST_METHOD_OPTIONS           = HttpRequest\Options::HTTP_METHOD;
-    const VALID_FORMATS                    = [
-        self::FORMAT_TXT,
-        self::FORMAT_JSON,
-    ];
     const ACCESS_TOKEN_HEADER              = 'X-Access-Token';
     const ACCESS_TOKEN_POST_PARAM          = 'accessToken';
     const ACCESS_TOKEN_GET_PARAM           = 'accessToken';
@@ -77,6 +71,11 @@ class ApiRouter extends BaseMiddle
 
     // --------------------------------------------------------------------------
 
+    /** @var array */
+    private static $aOutputValidFormats;
+
+    // --------------------------------------------------------------------------
+
     /** @var string */
     private $sRequestMethod;
 
@@ -89,14 +88,11 @@ class ApiRouter extends BaseMiddle
     /** @var string */
     private $sMethod;
 
-    /** @var array */
-    private $aOutputValidFormats;
-
     /** @var string */
     private $sOutputFormat;
 
     /** @var bool */
-    private $bOutputSendHeader;
+    private $bOutputSendHeader = true;
 
     /** @var Logger */
     private $oLogger;
@@ -117,11 +113,6 @@ class ApiRouter extends BaseMiddle
 
         // --------------------------------------------------------------------------
 
-        //  Set defaults
-        $this->bOutputSendHeader = true;
-
-        // --------------------------------------------------------------------------
-
         //  Work out the request method
         /** @var Input $oInput */
         $oInput               = Factory::service('Input');
@@ -133,6 +124,24 @@ class ApiRouter extends BaseMiddle
          * We're doing this because of the optional return type at the end of the string;
          * it's easier to regex that quickly, remove it, then split up the segments.
          */
+
+        //  Look for valid output formats
+        $aComponents = Components::available();
+
+        //  Shift the app onto the end so it overrides any module supplied formats
+        $oApp = array_shift($aComponents);
+        array_push($aComponents, $oApp);
+
+        foreach ($aComponents as $oComponent) {
+
+            $oClasses = $oComponent
+                ->findClasses('Api\Output')
+                ->whichImplement(\Nails\Api\Interfaces\Output::class);
+
+            foreach ($oClasses as $sClass) {
+                static::$aOutputValidFormats[strtoupper($sClass::getSlug())] = $sClass;
+            }
+        }
 
         $this->sOutputFormat = static::getOutputFormat();
         $sUri                = preg_replace(static::OUTPUT_FORMAT_PATTERN, '', uri_string());
@@ -382,6 +391,7 @@ class ApiRouter extends BaseMiddle
 
                 $aOut = [
                     'status' => $oResponse->getCode(),
+                    'body'   => $oResponse->getBody(),
                     'data'   => $oResponse->getData(),
                     'meta'   => $oResponse->getMeta(),
                 ];
@@ -484,14 +494,14 @@ class ApiRouter extends BaseMiddle
         // --------------------------------------------------------------------------
 
         //  Output content
-        switch ($this->sOutputFormat) {
-            case static::FORMAT_TXT:
-                $sOut = $this->outputTxt($aOut);
-                break;
+        $sOutputClass = static::$aOutputValidFormats[$this->sOutputFormat];
+        $oOutput->set_content_type($sOutputClass::getContentType());
 
-            case static::FORMAT_JSON:
-                $sOut = $this->outputJson($aOut);
-                break;
+        if (array_key_exists('body', $aOut) && $aOut['body'] !== null) {
+            $sOut = $aOut['body'];
+        } else {
+            unset($aOut['body']);
+            $sOut = $sOutputClass::render($aOut);
         }
 
         $oOutput->set_output($sOut);
@@ -513,49 +523,6 @@ class ApiRouter extends BaseMiddle
         $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
         $oOutput->set_header('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS));
         $oOutput->set_header('Access-Control-Max-Age: ' . static::ACCESS_CONTROL_MAX_AGE);
-    }
-
-    // --------------------------------------------------------------------------
-
-    /**
-     * Formats $aOut as a plain text string formatted as JSON (for easy reading)
-     * but a plaintext contentType
-     *
-     * @param array $aOut The result of the API call
-     *
-     * @return string
-     */
-    private function outputTxt($aOut)
-    {
-        /** @var Output $oOutput */
-        $oOutput = Factory::service('Output');
-        $oOutput->set_content_type('text/html');
-        if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
-            return json_encode($aOut, JSON_PRETTY_PRINT);
-        } else {
-            return json_encode($aOut);
-        }
-    }
-
-    // --------------------------------------------------------------------------
-
-    /**
-     * Formats $aOut as a JSON string
-     *
-     * @param array $aOut The result of the API call
-     *
-     * @return string
-     */
-    private function outputJson($aOut)
-    {
-        /** @var Output $oOutput */
-        $oOutput = Factory::service('Output');
-        $oOutput->set_content_type('application/json');
-        if (Environment::not(Environment::ENV_PROD) && defined('JSON_PRETTY_PRINT')) {
-            return json_encode($aOut, JSON_PRETTY_PRINT);
-        } else {
-            return json_encode($aOut);
-        }
     }
 
     // --------------------------------------------------------------------------
@@ -600,7 +567,7 @@ class ApiRouter extends BaseMiddle
      */
     private static function isValidFormat($sFormat): bool
     {
-        return in_array(strtoupper($sFormat), static::VALID_FORMATS);
+        return in_array(strtoupper($sFormat), array_keys(static::$aOutputValidFormats));
     }
 
     // --------------------------------------------------------------------------
