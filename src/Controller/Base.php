@@ -135,6 +135,18 @@ abstract class Base extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
+     * Returns the raw request body
+     *
+     * @return string
+     */
+    protected function getRequestBody(): string
+    {
+        return stream_get_contents(fopen('php://input', 'r'));
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
      * Gets the request data from the POST vars, falling back to the request body
      *
      * @return array
@@ -151,7 +163,7 @@ abstract class Base extends BaseMiddle
         $aData  = $oInput->post();
 
         if (empty($aData)) {
-            $sData = stream_get_contents(fopen('php://input', 'r'));
+            $sData = $this->getRequestBody();
             $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
         }
 
