@@ -177,7 +177,7 @@ class ApiRouter extends BaseMiddle
             $this->setCorsHeaders();
             /** @var Output $oOutput */
             $oOutput = Factory::service('Output');
-            $oOutput->set_status_header(HttpCodes::STATUS_NO_CONTENT);
+            $oOutput->setStatusHeader(HttpCodes::STATUS_NO_CONTENT);
             return;
 
         } else {
@@ -470,9 +470,10 @@ class ApiRouter extends BaseMiddle
         $oHttpCodes = Factory::service('HttpCodes');
 
         //  Set cache headers
-        $oOutput->set_header('Cache-Control: no-store, no-cache, must-revalidate');
-        $oOutput->set_header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
-        $oOutput->set_header('Pragma: no-cache');
+        $oOutput
+            ->setHeader('Cache-Control: no-store, no-cache, must-revalidate')
+            ->setHeader('Expires: Mon, 26 Jul 1997 05:00:00 GMT')
+            ->setHeader('Pragma: no-cache');
 
         //  Set access control headers
         $this->setCorsHeaders();
@@ -484,14 +485,14 @@ class ApiRouter extends BaseMiddle
             $sProtocol   = $oInput->server('SERVER_PROTOCOL');
             $iHttpCode   = getFromArray('status', $aOut, $oHttpCodes::STATUS_OK);
             $sHttpString = $oHttpCodes::getByCode($iHttpCode);
-            $oOutput->set_header($sProtocol . ' ' . $iHttpCode . ' ' . $sHttpString);
+            $oOutput->setHeader($sProtocol . ' ' . $iHttpCode . ' ' . $sHttpString);
         }
 
         // --------------------------------------------------------------------------
 
         //  Output content
         $sOutputClass = static::$aOutputValidFormats[$this->sOutputFormat];
-        $oOutput->set_content_type($sOutputClass::getContentType());
+        $oOutput->setContentType($sOutputClass::getContentType());
 
         if (array_key_exists('body', $aOut) && $aOut['body'] !== null) {
             $sOut = $aOut['body'];
@@ -500,7 +501,7 @@ class ApiRouter extends BaseMiddle
             $sOut = $sOutputClass::render($aOut);
         }
 
-        $oOutput->set_output($sOut);
+        $oOutput->setOutput($sOut);
     }
 
     // --------------------------------------------------------------------------
@@ -514,11 +515,12 @@ class ApiRouter extends BaseMiddle
     {
         /** @var Output $oOutput */
         $oOutput = Factory::service('Output');
-        $oOutput->set_header('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN);
-        $oOutput->set_header('Access-Control-Allow-Credentials: ' . static::ACCESS_CONTROL_ALLOW_CREDENTIALS);
-        $oOutput->set_header('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS));
-        $oOutput->set_header('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS));
-        $oOutput->set_header('Access-Control-Max-Age: ' . static::ACCESS_CONTROL_MAX_AGE);
+        $oOutput
+            ->setHeader('Access-Control-Allow-Origin: ' . static::ACCESS_CONTROL_ALLOW_ORIGIN)
+            ->setHeader('Access-Control-Allow-Credentials: ' . static::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+            ->setHeader('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS))
+            ->setHeader('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS))
+            ->setHeader('Access-Control-Max-Age: ' . static::ACCESS_CONTROL_MAX_AGE);
     }
 
     // --------------------------------------------------------------------------
