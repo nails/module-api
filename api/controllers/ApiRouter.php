@@ -14,6 +14,8 @@ use Nails\Auth;
 use Nails\Api\Constants;
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
+use Nails\Common\Exception\FactoryException;
+use Nails\Common\Exception\ModelException;
 use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\ValidationException;
 use Nails\Common\Factory\HttpRequest;
@@ -74,38 +76,38 @@ class ApiRouter extends BaseMiddle
     /** @var array */
     protected static $aOutputValidFormats;
 
-    // --------------------------------------------------------------------------
+    /** @var string */
+    protected $sRequestMethod;
 
     /** @var string */
-    private $sRequestMethod;
+    protected $sModuleName;
 
     /** @var string */
-    private $sModuleName;
+    protected $sClassName;
 
     /** @var string */
-    private $sClassName;
+    protected $sMethod;
 
     /** @var string */
-    private $sMethod;
-
-    /** @var string */
-    private $sOutputFormat;
+    protected $sOutputFormat;
 
     /** @var bool */
-    private $bOutputSendHeader = true;
+    protected $bOutputSendHeader = true;
 
     /** @var Logger */
-    private $oLogger;
+    protected $oLogger;
 
     /** @var string */
-    private $sAccessToken;
+    protected $sAccessToken;
+
+    protected $oAccessToken;
 
     // --------------------------------------------------------------------------
 
     /**
      * ApiRouter constructor.
      *
-     * @throws \Nails\Common\Exception\FactoryException
+     * @throws FactoryException
      */
     public function __construct()
     {
@@ -200,77 +202,20 @@ class ApiRouter extends BaseMiddle
 
                 // --------------------------------------------------------------------------
 
-                //  Register API modules
-                $aNamespaces = [
-                    'app' => (object) [
-                        'namespace' => 'App\\',
-                    ],
-                ];
-                foreach (Components::modules() as $oModule) {
-                    if (!empty($oModule->data->{Constants::MODULE_SLUG}->namespace)) {
-                        $sNamespace = $oModule->data->{Constants::MODULE_SLUG}->namespace;
-                        if (array_key_exists($sNamespace, $aNamespaces)) {
-                            throw new NailsException(
-                                sprintf(
-                                    'Conflicting API namespace "%s" in use by "%s" and "%s"',
-                                    $sNamespace,
-                                    $oModule->slug,
-                                    $aNamespaces[$sNamespace]->slug
-                                )
-                            );
-                        }
-                        $aNamespaces[$sNamespace] = $oModule;
-                    }
-                }
+                $aControllerMap = $this->discoverApiControllers();
+                $oModule        = $aControllerMap[$this->sModuleName] ?? null;
 
-                if (!array_key_exists($this->sModuleName, $aNamespaces)) {
+                if (empty($oModule)) {
                     $this->invalidApiRoute();
                 }
 
-                $oNamespace          = $aNamespaces[$this->sModuleName];
-                $sOriginalController = $this->sClassName;
-
-                //  Do we need to remap the controller?
-                if (!empty($oNamespace->data->{Constants::MODULE_SLUG}->{'controller-map'})) {
-
-                    $aMap             = (array) $oNamespace->data->{Constants::MODULE_SLUG}->{'controller-map'};
-                    $this->sClassName = getFromArray($this->sClassName, $aMap, $this->sClassName);
-
-                    //  This prevents users from accessing the "correct" controller, so we only have one valid route
-                    $sRemapped = array_search($sOriginalController, $aMap);
-                    if ($sRemapped !== false) {
-                        $this->sClassName = $sRemapped;
-                    }
-                }
-
-                $sController = $oNamespace->namespace . 'Api\\Controller\\' . $this->sClassName;
+                $sController = $this->normaliseControllerClass($oModule);
 
                 if (!class_exists($sController)) {
                     $this->invalidApiRoute();
                 }
 
-                $mAuth = $sController::isAuthenticated($this->sRequestMethod, $this->sMethod);
-                if ($mAuth !== true) {
-
-                    if (is_array($mAuth)) {
-                        $sError  = getFromArray('error', $mAuth, $oHttpCodes::getByCode($oHttpCodes::STATUS_UNAUTHORIZED));
-                        $iStatus = (int) getFromArray('status', $mAuth, $oHttpCodes::STATUS_UNAUTHORIZED);
-                    } else {
-                        $sError  = 'You must be logged in to access this resource';
-                        $iStatus = $oHttpCodes::STATUS_UNAUTHORIZED;
-                    }
-
-                    throw new ApiException($sError, $iStatus);
-                }
-
-                if (!empty($sController::REQUIRE_SCOPE)) {
-                    if (!$oUserAccessTokenModel->hasScope($oAccessToken, $sController::REQUIRE_SCOPE)) {
-                        throw new ApiException(
-                            'Access token with "' . $sController::REQUIRE_SCOPE . '" scope is required.',
-                            $oHttpCodes::STATUS_UNAUTHORIZED
-                        );
-                    }
-                }
+                $this->checkControllerAuth($sController);
 
                 //  New instance of the controller
                 $oInstance = new $sController($this);
@@ -416,8 +361,8 @@ class ApiRouter extends BaseMiddle
      * @throws ApiException
      * @throws NailsException
      * @throws ReflectionException
-     * @throws \Nails\Common\Exception\FactoryException
-     * @throws \Nails\Common\Exception\ModelException
+     * @throws FactoryException
+     * @throws ModelException
      */
     protected function verifyAccessToken(): self
     {
@@ -441,12 +386,12 @@ class ApiRouter extends BaseMiddle
         if ($sAccessToken) {
 
             $this->sAccessToken = $sAccessToken;
-            $oAccessToken       = $oUserAccessTokenModel->getByValidToken($sAccessToken);
+            $this->oAccessToken = $oUserAccessTokenModel->getByValidToken($sAccessToken);
 
-            if ($oAccessToken) {
+            if ($this->oAccessToken) {
                 /** @var Auth\Model\User $oUserModel */
                 $oUserModel = Factory::model('User', Auth\Constants::MODULE_SLUG);
-                $oUserModel->setLoginData($oAccessToken->user_id, false);
+                $oUserModel->setLoginData($this->oAccessToken->user_id, false);
 
             } else {
                 throw new ApiException(
@@ -462,10 +407,147 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
+     * Discovers API controllers
+     *
+     * @return array
+     * @throws ApiException
+     * @throws NailsException
+     */
+    protected function discoverApiControllers(): array
+    {
+        $aControllerMap = [];
+        foreach (Components::available() as $oModule) {
+
+            $aClasses = $oModule
+                ->findClasses('Api\\Controller')
+                ->whichExtend(\Nails\Api\Controller\Base::class);
+
+            $sNamespace = $oModule->slug === Components::$sAppSlug
+                ? Components::$sAppSlug
+                : ($oModule->data->{Constants::MODULE_SLUG}->namespace ?? null);
+
+            if (empty($sNamespace) && count($aClasses)) {
+                throw new ApiException(
+                    sprintf(
+                        'Found API controllers for module %s, but module does not define an API namespace',
+                        $oModule->slug
+                    )
+                );
+
+            } elseif (!count($aClasses)) {
+                continue;
+            }
+
+            if (array_key_exists($sNamespace, $aControllerMap)) {
+                throw new NailsException(
+                    sprintf(
+                        'Conflicting API namespace "%s" in use by "%s" and "%s"',
+                        $sNamespace,
+                        $oModule->slug,
+                        $aControllerMap[$sNamespace]->module->slug
+                    )
+                );
+            }
+
+            $aControllerMap[$sNamespace] = (object) [
+                'module'      => $oModule,
+                'controllers' => [],
+            ];
+
+            foreach ($aClasses as $sClass) {
+                $aControllerMap[$sNamespace]->controllers[strtolower($sClass)] = $sClass;
+            }
+        }
+
+        return $aControllerMap;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Normalises the controller class name, taking into account any defined remapping
+     *
+     * @param stdClass $oModule The module as created by discoverApiControllers
+     *
+     * @return string
+     * @throws ApiException
+     * @throws FactoryException
+     */
+    protected function normaliseControllerClass(stdClass $oModule): string
+    {
+        $aRemap = (array) ($oModule->module->data->{Constants::MODULE_SLUG}->{'controller-map'} ?? []);
+        if (!empty($aRemap)) {
+
+            $sOriginalController = $this->sClassName;
+            $this->sClassName    = getFromArray($this->sClassName, $aRemap, $this->sClassName);
+
+            //  This prevents users from accessing the "correct" controller, so we only have one valid route
+            $sRemapped = array_search($sOriginalController, $aRemap);
+            if ($sRemapped !== false) {
+                $this->invalidApiRoute();
+            }
+        }
+
+        $sController = $oModule->module->namespace . 'Api\\Controller\\' . $this->sClassName;
+        $sController = $oModule->controllers[strtolower($sController)] ?? $sController;
+
+        return $sController;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Checks the controllers auth requirements
+     *
+     * @param string $sController The Controller class name
+     *
+     * @throws ApiException
+     * @throws FactoryException
+     */
+    protected function checkControllerAuth(string $sController): void
+    {
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+        /** @var Auth\Model\User\AccessToken $oUserAccessTokenModel */
+        $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
+
+        $mAuth = $sController::isAuthenticated($this->sRequestMethod, $this->sMethod);
+        if ($mAuth !== true) {
+
+            if (is_array($mAuth)) {
+                throw new ApiException(
+                    getFromArray('error', $mAuth, $oHttpCodes::getByCode($oHttpCodes::STATUS_UNAUTHORIZED)),
+                    (int) getFromArray('status', $mAuth, $oHttpCodes::STATUS_UNAUTHORIZED)
+                );
+
+            } else {
+                throw new ApiException(
+                    'You must be logged in to access this resource',
+                    $oHttpCodes::STATUS_UNAUTHORIZED
+                );
+            }
+        }
+
+        if (!empty($sController::REQUIRE_SCOPE)) {
+            if (!$oUserAccessTokenModel->hasScope($this->oAccessToken, $sController::REQUIRE_SCOPE)) {
+                throw new ApiException(
+                    sprintf(
+                        'Access token with "%s" scope is required.',
+                        $sController::REQUIRE_SCOPE
+                    ),
+                    $oHttpCodes::STATUS_UNAUTHORIZED
+                );
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
      * Throws an invalid API route 404 exception
      *
      * @throws ApiException
-     * @throws \Nails\Common\Exception\FactoryException
+     * @throws FactoryException
      */
     protected function invalidApiRoute(): void
     {
@@ -562,7 +644,7 @@ class ApiRouter extends BaseMiddle
      * Sets CORS headers
      *
      * @return $this
-     * @throws \Nails\Common\Exception\FactoryException
+     * @throws FactoryException
      */
     protected function setCorsHeaders(): self
     {
@@ -584,7 +666,7 @@ class ApiRouter extends BaseMiddle
      * Set the CORS status header
      *
      * @return $this
-     * @throws \Nails\Common\Exception\FactoryException
+     * @throws FactoryException
      */
     protected function setCorsStatusHeader(): self
     {
