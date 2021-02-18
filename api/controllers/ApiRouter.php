@@ -167,20 +167,6 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
-     * Returns the output format
-     *
-     * @return string|null
-     */
-    public static function getOutputFormat()
-    {
-        preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
-        $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
-        return static::isValidFormat($sFormat) ? $sFormat : static::DEFAULT_FORMAT;
-    }
-
-    // --------------------------------------------------------------------------
-
-    /**
      * Route the call to the correct place
      */
     public function index()
@@ -542,6 +528,20 @@ class ApiRouter extends BaseMiddle
         }
 
         return false;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the output format
+     *
+     * @return string|null
+     */
+    public static function getOutputFormat()
+    {
+        preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
+        $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
+        return static::isValidFormat($sFormat) ? $sFormat : static::DEFAULT_FORMAT;
     }
 
     // --------------------------------------------------------------------------
