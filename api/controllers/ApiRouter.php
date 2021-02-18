@@ -182,54 +182,20 @@ class ApiRouter extends BaseMiddle
         } else {
 
             try {
-                /**
-                 * If an access token has been passed then verify it
-                 *
-                 * Passing the token via the header is preferred, but fallback to the GET
-                 * and POST arrays.
-                 */
 
-                /** @var Input $oInput */
-                $oInput = Factory::service('Input');
                 /** @var HttpCodes $oHttpCodes */
                 $oHttpCodes = Factory::service('HttpCodes');
                 /** @var Auth\Model\User\AccessToken $oUserAccessTokenModel */
                 $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
 
-                $sAccessToken = $oInput->header(static::ACCESS_TOKEN_HEADER);
+                // --------------------------------------------------------------------------
 
-                if (!$sAccessToken) {
-                    $sAccessToken = $oInput->post(static::ACCESS_TOKEN_POST_PARAM);
-                }
-
-                if (!$sAccessToken) {
-                    $sAccessToken = $oInput->get(static::ACCESS_TOKEN_GET_PARAM);
-                }
-
-                if ($sAccessToken) {
-
-                    $this->sAccessToken = $sAccessToken;
-                    $oAccessToken       = $oUserAccessTokenModel->getByValidToken($sAccessToken);
-
-                    if ($oAccessToken) {
-                        /** @var Auth\Model\User $oUserModel */
-                        $oUserModel = Factory::model('User', Auth\Constants::MODULE_SLUG);
-                        $oUserModel->setLoginData($oAccessToken->user_id, false);
-                    } else {
-                        throw new ApiException(
-                            'Invalid access token',
-                            $oHttpCodes::STATUS_UNAUTHORIZED
-                        );
-                    }
-                }
+                $this->verifyAccessToken();
 
                 // --------------------------------------------------------------------------
 
                 if (!$this->outputSetFormat($this->sOutputFormat)) {
-                    throw new ApiException(
-                        '"' . $this->sOutputFormat . '" is not a valid format.',
-                        $oHttpCodes::STATUS_BAD_REQUEST
-                    );
+                    $this->invalidApiFormat();
                 }
 
                 // --------------------------------------------------------------------------
@@ -443,7 +409,60 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
-     * throws an invalid API route 404 exception
+     * Verifies the access token, if supplied. Passing the token via the header is
+     * preferred, but fallback to the GET and POST arrays.
+     *
+     * @return $this
+     * @throws ApiException
+     * @throws NailsException
+     * @throws ReflectionException
+     * @throws \Nails\Common\Exception\FactoryException
+     * @throws \Nails\Common\Exception\ModelException
+     */
+    protected function verifyAccessToken(): self
+    {
+        /** @var Input $oInput */
+        $oInput = Factory::service('Input');
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+        /** @var Auth\Model\User\AccessToken $oUserAccessTokenModel */
+        $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
+
+        $sAccessToken = $oInput->header(static::ACCESS_TOKEN_HEADER);
+
+        if (!$sAccessToken) {
+            $sAccessToken = $oInput->post(static::ACCESS_TOKEN_POST_PARAM);
+        }
+
+        if (!$sAccessToken) {
+            $sAccessToken = $oInput->get(static::ACCESS_TOKEN_GET_PARAM);
+        }
+
+        if ($sAccessToken) {
+
+            $this->sAccessToken = $sAccessToken;
+            $oAccessToken       = $oUserAccessTokenModel->getByValidToken($sAccessToken);
+
+            if ($oAccessToken) {
+                /** @var Auth\Model\User $oUserModel */
+                $oUserModel = Factory::model('User', Auth\Constants::MODULE_SLUG);
+                $oUserModel->setLoginData($oAccessToken->user_id, false);
+
+            } else {
+                throw new ApiException(
+                    'Invalid access token',
+                    $oHttpCodes::STATUS_UNAUTHORIZED
+                );
+            }
+        }
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Throws an invalid API route 404 exception
      *
      * @throws ApiException
      * @throws \Nails\Common\Exception\FactoryException
@@ -463,6 +482,27 @@ class ApiRouter extends BaseMiddle
         );
 
         throw new ApiException($s404Error, $i404Status);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Throws an invalid API format 400 exception
+     *
+     * @throws ApiException
+     */
+    protected function invalidApiFormat(): void
+    {
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+
+        throw new ApiException(
+            sprintf(
+                '"%s" is not a valid format.',
+                $this->sOutputFormat
+            ),
+            $oHttpCodes::STATUS_BAD_REQUEST
+        );
     }
 
     // --------------------------------------------------------------------------
