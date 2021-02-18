@@ -590,7 +590,7 @@ class ApiRouter extends BaseMiddle
      *
      * @return bool
      */
-    private static function isValidFormat($sFormat): bool
+    private static function isValidFormat(?string $sFormat): bool
     {
         return in_array(strtoupper($sFormat), array_keys(static::$aOutputValidFormats));
     }
