@@ -174,10 +174,9 @@ class ApiRouter extends BaseMiddle
         //  Handle OPTIONS CORS pre-flight requests
         if ($this->sRequestMethod === static::REQUEST_METHOD_OPTIONS) {
 
-            $this->setCorsHeaders();
-            /** @var Output $oOutput */
-            $oOutput = Factory::service('Output');
-            $oOutput->setStatusHeader(HttpCodes::STATUS_NO_CONTENT);
+            $this
+                ->setCorsHeaders()
+                ->setCorsStatusHeader();
             return;
 
         } else {
@@ -509,9 +508,10 @@ class ApiRouter extends BaseMiddle
     /**
      * Sets CORS headers
      *
+     * @return $this
      * @throws \Nails\Common\Exception\FactoryException
      */
-    protected function setCorsHeaders()
+    protected function setCorsHeaders(): self
     {
         /** @var Output $oOutput */
         $oOutput = Factory::service('Output');
@@ -521,6 +521,24 @@ class ApiRouter extends BaseMiddle
             ->setHeader('Access-Control-Allow-Headers: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_HEADERS))
             ->setHeader('Access-Control-Allow-Methods: ' . implode(', ', static::ACCESS_CONTROL_ALLOW_METHODS))
             ->setHeader('Access-Control-Max-Age: ' . static::ACCESS_CONTROL_MAX_AGE);
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Set the CORS status header
+     *
+     * @return $this
+     * @throws \Nails\Common\Exception\FactoryException
+     */
+    protected function setCorsStatusHeader(): self
+    {
+        /** @var Output $oOutput */
+        $oOutput = Factory::service('Output');
+        $oOutput->setStatusHeader(HttpCodes::STATUS_NO_CONTENT);
+        return $this;
     }
 
     // --------------------------------------------------------------------------
