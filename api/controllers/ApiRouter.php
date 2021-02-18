@@ -246,8 +246,12 @@ class ApiRouter extends BaseMiddle
                         $sNamespace = $oModule->data->{Constants::MODULE_SLUG}->namespace;
                         if (array_key_exists($sNamespace, $aNamespaces)) {
                             throw new NailsException(
-                                'Conflicting API namespace "' . $sNamespace . '" in use by ' .
-                                '"' . $oModule->slug . '" and "' . $aNamespaces[$sNamespace]->slug . '"'
+                                sprintf(
+                                    'Conflicting API namespace "%s" in use by "%s" and "%s"',
+                                    $sNamespace,
+                                    $oModule->slug,
+                                    $aNamespaces[$sNamespace]->slug
+                                )
                             );
                         }
                         $aNamespaces[$sNamespace] = $oModule;
@@ -255,7 +259,13 @@ class ApiRouter extends BaseMiddle
                 }
 
                 $i404Status = $oHttpCodes::STATUS_NOT_FOUND;
-                $s404Error  = '"' . strtolower($this->sModuleName . '/' . $this->sClassName . '/' . $this->sMethod) . '" is not a valid API route.';
+                $s404Error  = sprintf(
+                    '"%s: %s/%s/%s" is not a valid API route.',
+                    $this->getRequestMethod(),
+                    strtolower($this->sModuleName),
+                    strtolower($this->sClassName),
+                    strtolower($this->sMethod)
+                );
 
                 if (!array_key_exists($this->sModuleName, $aNamespaces)) {
                     throw new ApiException($s404Error, $i404Status);
@@ -362,8 +372,8 @@ class ApiRouter extends BaseMiddle
 
                 if (!$bDidFindRoute) {
                     throw new ApiException(
-                        '"' . $this->sRequestMethod . ': ' . $this->sModuleName . '/' . $this->sClassName . '/' . $this->sMethod . '" is not a valid API route.',
-                        $oHttpCodes::STATUS_NOT_FOUND
+                        $s404Error,
+                        $i404Status
                     );
                 }
 
