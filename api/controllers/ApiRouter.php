@@ -601,13 +601,27 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
+     * Confirms whether the request is of the supplied type
+     *
+     * @param string $sMethod The request method to check
+     *
+     * @return bool
+     */
+    protected function isRequestMethod(string $sMethod): bool
+    {
+        return $this->getRequestMethod() === $sMethod;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
      * Determines whether the request is a GET request
      *
      * @return bool
      */
     public function isGetRequest(): bool
     {
-        return $this->getRequestMethod() === static::REQUEST_METHOD_GET;
+        return $this->isRequestMethod(static::REQUEST_METHOD_GET);
     }
 
     // --------------------------------------------------------------------------
@@ -619,7 +633,7 @@ class ApiRouter extends BaseMiddle
      */
     public function isPutRequest(): bool
     {
-        return $this->getRequestMethod() === static::REQUEST_METHOD_PUT;
+        return $this->isRequestMethod(static::REQUEST_METHOD_PUT);
     }
 
     // --------------------------------------------------------------------------
@@ -631,7 +645,7 @@ class ApiRouter extends BaseMiddle
      */
     public function isPostRequest(): bool
     {
-        return $this->getRequestMethod() === static::REQUEST_METHOD_POST;
+        return $this->isRequestMethod(static::REQUEST_METHOD_POST);
     }
 
     // --------------------------------------------------------------------------
@@ -643,7 +657,7 @@ class ApiRouter extends BaseMiddle
      */
     public function isDeleteRequest(): bool
     {
-        return $this->getRequestMethod() === static::REQUEST_METHOD_DELETE;
+        return $this->isRequestMethod(static::REQUEST_METHOD_DELETE);
     }
 
     // --------------------------------------------------------------------------
