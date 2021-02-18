@@ -100,6 +100,7 @@ class ApiRouter extends BaseMiddle
     /** @var string */
     protected $sAccessToken;
 
+    /** @var Auth\Resource\User\AccessToken */
     protected $oAccessToken;
 
     // --------------------------------------------------------------------------
@@ -140,8 +141,6 @@ class ApiRouter extends BaseMiddle
 
                 /** @var HttpCodes $oHttpCodes */
                 $oHttpCodes = Factory::service('HttpCodes');
-                /** @var Auth\Model\User\AccessToken $oUserAccessTokenModel */
-                $oUserAccessTokenModel = Factory::model('UserAccessToken', Auth\Constants::MODULE_SLUG);
 
                 // --------------------------------------------------------------------------
 
@@ -523,7 +522,7 @@ class ApiRouter extends BaseMiddle
         }
 
         if (!empty($sController::REQUIRE_SCOPE)) {
-            if (!$oUserAccessTokenModel->hasScope($this->oAccessToken, $sController::REQUIRE_SCOPE)) {
+            if (!$this->oAccessToken->hasScope($sController::REQUIRE_SCOPE)) {
                 throw new ApiException(
                     sprintf(
                         'Access token with "%s" scope is required.',
