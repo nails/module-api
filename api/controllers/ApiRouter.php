@@ -112,58 +112,11 @@ class ApiRouter extends BaseMiddle
     public function __construct()
     {
         parent::__construct();
-
-        // --------------------------------------------------------------------------
-
-        //  Work out the request method
-        /** @var Input $oInput */
-        $oInput               = Factory::service('Input');
-        $this->sRequestMethod = $oInput->server('REQUEST_METHOD');
-        $this->sRequestMethod = $this->sRequestMethod ? $this->sRequestMethod : static::REQUEST_METHOD_GET;
-
-        /**
-         * In order to work out the next few parts we'll analyse the URI string manually.
-         * We're doing this because of the optional return type at the end of the string;
-         * it's easier to regex that quickly, remove it, then split up the segments.
-         */
-
-        //  Look for valid output formats
-        $aComponents = Components::available();
-
-        //  Shift the app onto the end so it overrides any module supplied formats
-        $oApp = array_shift($aComponents);
-        array_push($aComponents, $oApp);
-
-        foreach ($aComponents as $oComponent) {
-
-            $oClasses = $oComponent
-                ->findClasses('Api\Output')
-                ->whichImplement(\Nails\Api\Interfaces\Output::class);
-
-            foreach ($oClasses as $sClass) {
-                static::$aOutputValidFormats[strtoupper($sClass::getSlug())] = $sClass;
-            }
-        }
-
-        $this->sOutputFormat = static::detectOutputFormat();
-        $sUri                = preg_replace(static::OUTPUT_FORMAT_PATTERN, '', uri_string());
-
-        //  Remove the module prefix (i.e "api/") then explode into segments
-        //  Using regex as some systems will report a leading slash (e.g CLI)
-        $sUri = preg_replace('#/?api/#', '', $sUri);
-        $aUri = explode('/', $sUri);
-
-        //  Work out the sModuleName, sClassName and method
-        $this->sModuleName = getFromArray(0, $aUri, null);
-        $this->sClassName  = ucfirst(getFromArray(1, $aUri, $this->sModuleName));
-        $this->sMethod     = getFromArray(2, $aUri, 'index');
-
-        //  Configure logging
-        /** @var \Nails\Common\Resource\DateTime $oNow */
-        $oNow = Factory::factory('DateTime');
-        /** @var Logger oLogger */
-        $this->oLogger = Factory::factory('Logger');
-        $this->oLogger->setFile('api-' . $oNow->format('Y-m-d') . '.php');
+        $this
+            ->configureLogging()
+            ->detectRequestMethod()
+            ->detectOutputFormat()
+            ->detectUriSegments();
     }
 
     // --------------------------------------------------------------------------
@@ -217,71 +170,9 @@ class ApiRouter extends BaseMiddle
 
                 $this->checkControllerAuth($sController);
 
-                //  New instance of the controller
-                $oInstance = new $sController($this);
-
-                /**
-                 * We need to look for the appropriate method; we'll look in the following order:
-                 *
-                 * - {sRequestMethod}Remap()
-                 * - {sRequestMethod}{method}()
-                 * - anyRemap()
-                 * - any{method}()
-                 *
-                 * The second parameter is whether the method is a remap method or not.
-                 */
-                $bDidFindRoute = false;
-                $aMethods      = [
-                    [
-                        strtolower($this->sRequestMethod) . 'Remap',
-                        true,
-                    ],
-                    [
-                        strtolower($this->sRequestMethod) . ucfirst($this->sMethod),
-                        false,
-                    ],
-                    [
-                        'anyRemap',
-                        true,
-                    ],
-                    [
-                        'any' . ucfirst($this->sMethod),
-                        false,
-                    ],
-                ];
-
-                foreach ($aMethods as $aMethodName) {
-
-                    $sMethod  = getFromArray(0, $aMethodName);
-                    $bIsRemap = (bool) getFromArray(1, $aMethodName);
-                    if (is_callable([$oInstance, $sMethod])) {
-
-                        $bDidFindRoute = true;
-
-                        /**
-                         * If the method we're trying to call is a remap method, then the first
-                         * param should be the name of the method being called
-                         */
-                        if ($bIsRemap) {
-                            $oResponse = call_user_func_array([$oInstance, $sMethod], [$this->sMethod]);
-                        } else {
-                            $oResponse = call_user_func([$oInstance, $sMethod]);
-                        }
-                        break;
-                    }
-                }
-
-                if (!$bDidFindRoute) {
-                    $this->invalidApiRoute();
-                }
-
-                if (!($oResponse instanceof ApiResponse)) {
-                    //  This is a misconfiguration error, which we want to bubble up to the error handler
-                    throw new NailsException(
-                        'Return object must be an instance of \Nails\Api\Factory\ApiResponse',
-                        $oHttpCodes::STATUS_INTERNAL_SERVER_ERROR
-                    );
-                }
+                $oResponse = $this->callControllerMethod(
+                    new $sController($this)
+                );
 
                 $aOut = [
                     'status' => $oResponse->getCode(),
@@ -325,6 +216,7 @@ class ApiRouter extends BaseMiddle
                 $this->writeLog($aOut);
 
             } catch (\Exception $e) {
+
                 /**
                  * When running in PRODUCTION we want the global error handler to catch exceptions so that they
                  * can be handled proeprly and reported if necessary. In other environments we want to show the
@@ -349,6 +241,108 @@ class ApiRouter extends BaseMiddle
 
             $this->output($aOut);
         }
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Configures API logging
+     *
+     * @return $this
+     * @throws FactoryException
+     */
+    protected function configureLogging(): self
+    {
+        /** @var \Nails\Common\Resource\DateTime $oNow */
+        $oNow = Factory::factory('DateTime');
+        /** @var Logger oLogger */
+        $this->oLogger = Factory::factory('Logger');
+        $this->oLogger->setFile('api-' . $oNow->format('Y-m-d') . '.php');
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Detects the request method being used
+     *
+     * @return $this
+     * @throws FactoryException
+     */
+    protected function detectRequestMethod(): self
+    {
+        /** @var Input $oInput */
+        $oInput               = Factory::service('Input');
+        $this->sRequestMethod = $oInput->server('REQUEST_METHOD') ?: static::REQUEST_METHOD_GET;
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Detects and validates the output format from the URL
+     *
+     * @return $this
+     * @throws NailsException
+     */
+    protected function detectOutputFormat(): self
+    {
+        //  Look for valid output formats
+        $aComponents = Components::available();
+
+        //  Shift the app onto the end so it overrides any module supplied formats
+        $oApp = array_shift($aComponents);
+        array_push($aComponents, $oApp);
+
+        foreach ($aComponents as $oComponent) {
+
+            $oClasses = $oComponent
+                ->findClasses('Api\Output')
+                ->whichImplement(\Nails\Api\Interfaces\Output::class);
+
+            foreach ($oClasses as $sClass) {
+                static::$aOutputValidFormats[strtoupper($sClass::getSlug())] = $sClass;
+            }
+        }
+
+        preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
+        $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
+
+        $this->sOutputFormat = static::isValidFormat($sFormat)
+            ? $sFormat
+            : static::DEFAULT_FORMAT;
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Extracts the module, controller and method segments from the URI
+     *
+     * @return $this
+     */
+    protected function detectUriSegments(): self
+    {
+        /**
+         * In order to work out the next few parts we'll analyse the URI string manually.
+         * We're doing this because of the optional return type at the end of the string;
+         * it's easier to regex that quickly, remove it, then split up the segments.
+         */
+        $sUri = preg_replace(static::OUTPUT_FORMAT_PATTERN, '', uri_string());
+
+        //  Remove the module prefix (i.e "api/") then explode into segments
+        //  Using regex as some systems will report a leading slash (e.g CLI)
+        $sUri = preg_replace('#^/?api/#', '', $sUri);
+        $aUri = explode('/', $sUri);
+
+        $this->sModuleName = getFromArray(0, $aUri);
+        $this->sClassName  = getFromArray(1, $aUri, $this->sModuleName);
+        $this->sMethod     = getFromArray(2, $aUri, 'index');
+
+        return $this;
     }
 
     // --------------------------------------------------------------------------
@@ -544,6 +538,74 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
+     * Calls the appropriate controller method
+     *
+     * @param \Nails\Api\Controller\Base $oController The controller instance
+     *
+     * @return ApiResponse
+     * @throws ApiException
+     * @throws FactoryException
+     */
+    protected function callControllerMethod(\Nails\Api\Controller\Base $oController): ApiResponse
+    {
+        /**
+         * We need to look for the appropriate method; we'll look in the following order:
+         *
+         * - {sRequestMethod}Remap()
+         * - {sRequestMethod}{method}()
+         * - anyRemap()
+         * - any{method}()
+         *
+         * The second parameter is whether the method is a remap method or not.
+         */
+        $aMethods = [
+            [
+                'method'   => strtolower($this->sRequestMethod) . 'Remap',
+                'is_remap' => true,
+            ],
+            [
+                'method'   => strtolower($this->sRequestMethod) . ucfirst($this->sMethod),
+                'is_remap' => false,
+            ],
+            [
+                'method'   => 'anyRemap',
+                'is_remap' => true,
+            ],
+            [
+                'method'   => 'any' . ucfirst($this->sMethod),
+                'is_remap' => false,
+            ],
+        ];
+
+        foreach ($aMethods as $aMethod) {
+            if (is_callable([$oController, $aMethod['method']])) {
+                /**
+                 * If the method we're trying to call is a remap method, then the first
+                 * param should be the name of the method being called
+                 */
+                if ($aMethod['is_remap']) {
+                    return call_user_func_array(
+                        [
+                            $oController,
+                            $aMethod['method'],
+                        ],
+                        [$this->sMethod]);
+
+                } else {
+                    return call_user_func([
+                        $oController,
+                        $aMethod['method'],
+                    ]);
+                }
+            }
+        }
+
+        $this->invalidApiRoute();
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
      * Throws an invalid API route 404 exception
      *
      * @throws ApiException
@@ -710,30 +772,13 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
-     * Detects the putput frmat from the URI
-     *
-     * @return string
-     */
-    public static function detectOutputFormat(): string
-    {
-        preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
-        $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
-
-        return static::isValidFormat($sFormat)
-            ? $sFormat
-            : static::DEFAULT_FORMAT;
-    }
-
-    // --------------------------------------------------------------------------
-
-    /**
      * Sets whether the status header should be sent or not
      *
      * @param bool $sendHeader Whether the header should be sent or not
      */
-    public function outputSendHeader($sendHeader): bool
+    public function outputSendHeader($bSendHeader): bool
     {
-        $this->bOutputSendHeader = !empty($sendHeader);
+        $this->bOutputSendHeader = !empty($bSendHeader);
     }
 
     // --------------------------------------------------------------------------
