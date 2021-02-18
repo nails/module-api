@@ -143,7 +143,7 @@ class ApiRouter extends BaseMiddle
             }
         }
 
-        $this->sOutputFormat = static::getOutputFormat();
+        $this->sOutputFormat = static::detectOutputFormat();
         $sUri                = preg_replace(static::OUTPUT_FORMAT_PATTERN, '', uri_string());
 
         //  Remove the module prefix (i.e "api/") then explode into segments
@@ -533,15 +533,30 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /**
-     * Returns the output format
+     * Returns the putput format
      *
-     * @return string|null
+     * @return string
      */
-    public static function getOutputFormat()
+    public function outputGetFormat(): string
+    {
+        return $this->sOutputFormat;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Detects the putput frmat from the URI
+     *
+     * @return string
+     */
+    public static function detectOutputFormat(): string
     {
         preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
         $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
-        return static::isValidFormat($sFormat) ? $sFormat : static::DEFAULT_FORMAT;
+
+        return static::isValidFormat($sFormat)
+            ? $sFormat
+            : static::DEFAULT_FORMAT;
     }
 
     // --------------------------------------------------------------------------
