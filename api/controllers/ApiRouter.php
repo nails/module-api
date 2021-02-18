@@ -257,17 +257,8 @@ class ApiRouter extends BaseMiddle
                     }
                 }
 
-                $i404Status = $oHttpCodes::STATUS_NOT_FOUND;
-                $s404Error  = sprintf(
-                    '"%s: %s/%s/%s" is not a valid API route.',
-                    $this->getRequestMethod(),
-                    strtolower($this->sModuleName),
-                    strtolower($this->sClassName),
-                    strtolower($this->sMethod)
-                );
-
                 if (!array_key_exists($this->sModuleName, $aNamespaces)) {
-                    throw new ApiException($s404Error, $i404Status);
+                    $this->invalidApiRoute();
                 }
 
                 $oNamespace          = $aNamespaces[$this->sModuleName];
@@ -289,7 +280,7 @@ class ApiRouter extends BaseMiddle
                 $sController = $oNamespace->namespace . 'Api\\Controller\\' . $this->sClassName;
 
                 if (!class_exists($sController)) {
-                    throw new ApiException($s404Error, $i404Status);
+                    $this->invalidApiRoute();
                 }
 
                 $mAuth = $sController::isAuthenticated($this->sRequestMethod, $this->sMethod);
@@ -370,10 +361,7 @@ class ApiRouter extends BaseMiddle
                 }
 
                 if (!$bDidFindRoute) {
-                    throw new ApiException(
-                        $s404Error,
-                        $i404Status
-                    );
+                    $this->invalidApiRoute();
                 }
 
                 if (!($oResponse instanceof ApiResponse)) {
@@ -450,6 +438,31 @@ class ApiRouter extends BaseMiddle
 
             $this->output($aOut);
         }
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * throws an invalid API route 404 exception
+     *
+     * @throws ApiException
+     * @throws \Nails\Common\Exception\FactoryException
+     */
+    protected function invalidApiRoute(): void
+    {
+        /** @var HttpCodes $oHttpCodes */
+        $oHttpCodes = Factory::service('HttpCodes');
+
+        $i404Status = $oHttpCodes::STATUS_NOT_FOUND;
+        $s404Error  = sprintf(
+            '"%s: %s/%s/%s" is not a valid API route.',
+            $this->getRequestMethod(),
+            strtolower($this->sModuleName),
+            strtolower($this->sClassName),
+            strtolower($this->sMethod)
+        );
+
+        throw new ApiException($s404Error, $i404Status);
     }
 
     // --------------------------------------------------------------------------
