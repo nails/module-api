@@ -469,14 +469,19 @@ class ApiRouter extends BaseMiddle
     protected function normaliseControllerClass(stdClass $oModule): string
     {
         $aRemap = (array) ($oModule->module->data->{Constants::MODULE_SLUG}->{'controller-map'} ?? []);
+
         if (!empty($aRemap)) {
 
-            $sOriginalController = $this->sClassName;
-            $this->sClassName    = getFromArray($this->sClassName, $aRemap, $this->sClassName);
+            $aNormalisedMapKeys   = array_change_key_case($aRemap, CASE_LOWER);
+            $aNormalisedMapValues = array_map('strtolower', $aRemap);
+            $sNormalisedClass     = strtolower($this->sClassName);
+            $sOriginalClass       = strtolower($this->sClassName);
 
-            //  This prevents users from accessing the "correct" controller, so we only have one valid route
-            $sRemapped = array_search($sOriginalController, $aRemap);
-            if ($sRemapped !== false) {
+            if (array_key_exists($sNormalisedClass, $aNormalisedMapKeys)) {
+                $this->sClassName = $aNormalisedMapKeys[$sNormalisedClass];
+            }
+
+            if (array_search($sOriginalClass, $aNormalisedMapValues)) {
                 $this->invalidApiRoute();
             }
         }
