@@ -148,7 +148,8 @@ class ApiRouter extends BaseMiddle
 
                 // --------------------------------------------------------------------------
 
-                if (!$this->outputSetFormat($this->sOutputFormat)) {
+                $sFormat = $this->outputGetFormat();
+                if (!static::isValidFormat($sFormat)) {
                     $this->invalidApiFormat();
                 }
 
@@ -646,7 +647,7 @@ class ApiRouter extends BaseMiddle
         throw new ApiException(
             sprintf(
                 '"%s" is not a valid format.',
-                $this->sOutputFormat
+                $this->outputGetFormat()
             ),
             $oHttpCodes::STATUS_BAD_REQUEST
         );
@@ -690,7 +691,7 @@ class ApiRouter extends BaseMiddle
         // --------------------------------------------------------------------------
 
         //  Output content
-        $sOutputClass = static::$aOutputValidFormats[$this->sOutputFormat];
+        $sOutputClass = static::$aOutputValidFormats[$this->outputGetFormat()];
         $oOutput->setContentType($sOutputClass::getContentType());
 
         if (array_key_exists('body', $aOut) && $aOut['body'] !== null) {
