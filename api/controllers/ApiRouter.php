@@ -116,7 +116,7 @@ class ApiRouter extends BaseMiddle
         $this
             ->configureLogging()
             ->detectRequestMethod()
-            ->detectOutputFormat()
+            ->discoverOutputFormats()
             ->detectUriSegments();
     }
 
@@ -280,13 +280,7 @@ class ApiRouter extends BaseMiddle
 
     // --------------------------------------------------------------------------
 
-    /**
-     * Detects and validates the output format from the URL
-     *
-     * @return $this
-     * @throws NailsException
-     */
-    protected function detectOutputFormat(): self
+    protected function discoverOutputFormats(): self
     {
         //  Look for valid output formats
         $aComponents = Components::available();
@@ -306,12 +300,17 @@ class ApiRouter extends BaseMiddle
             }
         }
 
-        preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
-        $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
+        return $this;
+    }
 
-        $this->sOutputFormat = static::isValidFormat($sFormat)
-            ? $sFormat
-            : static::DEFAULT_FORMAT;
+    /**
+     * Detects and validates the output format from the URL
+     *
+     * @return $this
+     * @throws NailsException
+     */
+    protected function detectOutputFormat(): self
+    {
 
         return $this;
     }
@@ -770,7 +769,28 @@ class ApiRouter extends BaseMiddle
      */
     public function outputGetFormat(): string
     {
+        if (empty($this->sOutputFormat)) {
+            $this->sOutputFormat = static::parseOutputFormatFromUri();
+        }
+
         return $this->sOutputFormat;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Parses the outputformat from the URI
+     *
+     * @return string
+     */
+    public static function parseOutputFormatFromUri(): string
+    {
+        preg_match(static::OUTPUT_FORMAT_PATTERN, uri_string(), $aMatches);
+        $sFormat = !empty($aMatches[1]) ? strtoupper($aMatches[1]) : null;
+
+        return static::isValidFormat($sFormat)
+            ? $sFormat
+            : static::DEFAULT_FORMAT;
     }
 
     // --------------------------------------------------------------------------

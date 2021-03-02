@@ -1,6 +1,6 @@
 <?php
 if (\Nails\Environment::is(\Nails\Environment::ENV_PROD)) {
-    if (class_exists('ApiRouter') && ApiRouter::getOutputFormat() === 'JSON') {
+    if (class_exists('ApiRouter') && ApiRouter::parseOutputFormatFromUri() === \Nails\Api\Api\Output\Json::SLUG) {
         header('Content-Type: application/json');
     } else {
         header('Content-Type: text/html');
