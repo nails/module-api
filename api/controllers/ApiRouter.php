@@ -35,6 +35,17 @@ use Nails\Factory;
 if (class_exists('\App\Api\Controller\BaseRouter')) {
     abstract class BaseMiddle extends \App\Api\Controller\BaseRouter
     {
+        public function __construct()
+        {
+            if (!classExtends(parent::class, \Nails\Common\Controller\Base::class)) {
+                throw new NailsException(sprintf(
+                    'Class %s must extend %s',
+                    parent::class,
+                    \Nails\Common\Controller\Base::class
+                ));
+            }
+            parent::__construct();
+        }
     }
 } else {
     abstract class BaseMiddle extends \Nails\Common\Controller\Base
