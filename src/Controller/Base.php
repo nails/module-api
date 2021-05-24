@@ -164,7 +164,7 @@ abstract class Base extends BaseMiddle
 
         if (empty($aData)) {
             $sData = $this->getRequestBody();
-            $aData = json_decode($sData, JSON_OBJECT_AS_ARRAY) ?: [];
+            $aData = json_decode($sData, true) ?: [];
         }
 
         return $aData;

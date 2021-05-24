@@ -10,6 +10,7 @@ use Nails\Common\Exception\FactoryException;
 use Nails\Common\Exception\ModelException;
 use Nails\Common\Exception\NailsException;
 use Nails\Common\Exception\ValidationException;
+use Nails\Common\Helper\ArrayHelper;
 use Nails\Common\Resource;
 use Nails\Common\Service\FormValidation;
 use Nails\Common\Service\HttpCodes;
@@ -148,7 +149,6 @@ class CrudController extends Base
             throw new ApiException('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
 
-        /** @var \Nails\Common\Model\Base oModel */
         $this->oModel = Factory::model(
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
@@ -630,12 +630,20 @@ class CrudController extends Base
             case 'ID':
                 $oItem = $this->oModel->getById($sIdentifier, $aData);
                 break;
+
             case 'SLUG':
                 $oItem = $this->oModel->getBySlug($sIdentifier, $aData);
                 break;
+
             case 'TOKEN':
                 $oItem = $this->oModel->getByToken($sIdentifier, $aData);
                 break;
+
+            default:
+                throw new ApiException(sprintf(
+                    'Value for %s::CONFIG_LOOKUP_METHOD is invalid',
+                    static::class
+                ));
         }
 
         /** @var Resource\Entity $oItem */
@@ -693,7 +701,7 @@ class CrudController extends Base
         $aKeys   = array_unique(
             array_merge(
                 array_keys($aFields),
-                arrayExtractProperty($this->oModel->getExpandableFields(), 'trigger')
+                ArrayHelper::extract($this->oModel->getExpandableFields(), 'trigger')
             )
         );
 
@@ -702,11 +710,11 @@ class CrudController extends Base
 
         foreach ($aValidKeys as $sValidKey) {
 
-            $oField = getFromArray($sValidKey, $aFields);
+            $oField = ArrayHelper::get($sValidKey, $aFields);
             if (array_key_exists($sValidKey, $aData)) {
 
-                $aOut[$sValidKey] = getFromArray($sValidKey, $aData);
-                $oField           = getFromArray($sValidKey, $aFields);
+                $aOut[$sValidKey] = ArrayHelper::get($sValidKey, $aData);
+                $oField           = ArrayHelper::get($sValidKey, $aFields);
 
                 if (!empty($oField->validation)) {
                     $aRules[$sValidKey] = $oField->validation;

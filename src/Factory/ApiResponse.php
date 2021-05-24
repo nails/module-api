@@ -74,7 +74,7 @@ class ApiResponse
     /**
      * Get the response code
      *
-     * @return mixed
+     * @return int
      */
     public function getCode(): int
     {
@@ -117,7 +117,7 @@ class ApiResponse
     /**
      * Set the response payload
      *
-     * @param $mData
+     * @param mixed $mData
      *
      * @return $this
      */

@@ -17,6 +17,8 @@ namespace Nails\Api\Controller;
 
 use Nails\Api\Constants;
 use Nails\Api\Exception\ApiException;
+use Nails\Api\Factory\ApiResponse;
+use Nails\Common\Resource\Entity;
 use Nails\Factory;
 
 class DefaultController extends Base
@@ -52,9 +54,9 @@ class DefaultController extends Base
     /**
      * DefaultController constructor.
      *
-     * @throws ApiException
+     * @param \ApiRouter $oApiRouter
      *
-     * @param $oApiRouter
+     * @throws ApiException
      */
     public function __construct($oApiRouter)
     {
@@ -62,8 +64,8 @@ class DefaultController extends Base
 
         if (empty(static::CONFIG_MODEL_NAME)) {
             throw new ApiException('"static::CONFIG_MODEL_NAME" is required.');
-        }
-        if (empty(static::CONFIG_MODEL_PROVIDER)) {
+
+        } elseif (empty(static::CONFIG_MODEL_PROVIDER)) {
             throw new ApiException('"static::CONFIG_MODEL_PROVIDER" is required.');
         }
     }
@@ -77,7 +79,7 @@ class DefaultController extends Base
      * @param  integer $iPage    The page to display
      * @param  integer $iPerPage The number of items to display at the moment
      *
-     * @return array
+     * @return ApiResponse
      */
     public function getIndex($aData = [], $iPage = null, $iPerPage = null)
     {
@@ -102,6 +104,8 @@ class DefaultController extends Base
         );
 
         //  @todo (Pablo - 2018-06-24) - Paging
+
+        /** @var ApiResponse $oResponse */
         $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData(array_map([$this, 'formatObject'], $aResults));
         return $oResponse;
@@ -112,7 +116,7 @@ class DefaultController extends Base
     /**
      * Return an item by it's ID, or an array of items by their ID.
      *
-     * @return array
+     * @return ApiResponse
      */
     public function getId($aData = [])
     {
@@ -145,7 +149,9 @@ class DefaultController extends Base
             static::CONFIG_MODEL_NAME,
             static::CONFIG_MODEL_PROVIDER
         );
-        $aResults   = $oItemModel->getByIds($aIds, $aData);
+
+        /** @var Entity[] $aResults */
+        $aResults = $oItemModel->getByIds($aIds, $aData);
 
         if ($oInput->get('id')) {
             $oItem = reset($aResults);
@@ -154,6 +160,7 @@ class DefaultController extends Base
             $mData = array_map([$this, 'formatObject'], $aResults);
         }
 
+        /** @var ApiResponse $oResponse */
         $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData($mData);
         return $oResponse;
@@ -166,7 +173,7 @@ class DefaultController extends Base
      *
      * @param array $aData The configuration array
      *
-     * @return array
+     * @return ApiResponse
      */
     public function getSearch($aData = [])
     {
@@ -193,6 +200,7 @@ class DefaultController extends Base
             $aData
         );
 
+        /** @var ApiResponse $oResponse */
         $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData(array_map([$this, 'formatObject'], $oResult->data));
         return $oResponse;
@@ -203,7 +211,7 @@ class DefaultController extends Base
     /**
      * Creates a new item
      *
-     * @return array
+     * @return ApiResponse
      */
     public function postRemap()
     {
@@ -269,6 +277,7 @@ class DefaultController extends Base
             $oItem = $oItemModel->create($aPost, true);
         }
 
+        /** @var ApiResponse $oResponse */
         $oResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG);
         $oResponse->setData($this->formatObject($oItem));
         return $oResponse;
@@ -279,7 +288,7 @@ class DefaultController extends Base
     /**
      * Format the output
      *
-     * @param \stdClass $oObj The object to format
+     * @param Entity $oObj The object to format
      *
      * @return array
      */
@@ -287,7 +296,9 @@ class DefaultController extends Base
     {
         return [
             'id'    => $oObj->id,
-            'label' => $oObj->label,
+            'label' => property_exists($oObj, 'label')
+                ? $oObj->label
+                : null,
         ];
     }
 }

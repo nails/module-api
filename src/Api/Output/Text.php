@@ -47,7 +47,7 @@ class Text implements Output
     /**
      * Formats the return value from the resposne data
      *
-     * @param array $aResponse The response data
+     * @param array $aOut The response data
      *
      * @return string
      */
