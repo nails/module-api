@@ -85,7 +85,7 @@ class ApiRouter extends BaseMiddle
     // --------------------------------------------------------------------------
 
     /** @var array */
-    protected static $aOutputValidFormats;
+    protected static $aOutputValidFormats = [];
 
     /** @var string */
     protected $sRequestMethod;
