@@ -59,7 +59,7 @@ abstract class Base extends BaseMiddle
     /**
      * Require the user's access token to have a particular scope
      *
-     * @var string
+     * @var string|null
      */
     const REQUIRE_SCOPE = null;
 
