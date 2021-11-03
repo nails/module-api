@@ -129,6 +129,20 @@ class ApiRouter extends BaseMiddle
             ->detectRequestMethod()
             ->discoverOutputFormats()
             ->detectUriSegments();
+
+        /**
+         * Calls to the API will load the base controller, this will instanciate the
+         * UserFeedback class which will empty the session of flashdata. Flashdata
+         * is never used as part of the API so any flashdata is not
+         * relevant/intended for the API, so it should be persisted.
+         *
+         * This was demonstrated as a race condition in module-admin where unloading
+         * the page resulted in an API call which would consume the flashdata, meaning
+         * the subsequent page not having any status messages.
+         *
+         * Pablo — 2021-11-03
+         */
+        $this->oUserFeedback->persist();
     }
 
     // --------------------------------------------------------------------------
