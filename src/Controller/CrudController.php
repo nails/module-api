@@ -416,14 +416,22 @@ class CrudController extends Base
         }
 
         $iTotal   = $this->oModel->countAll($aData);
-        $aResults = array_map(
-            [$this, 'formatObject'],
-            $this->oModel->getAll(
-                $iPage,
-                static::CONFIG_PER_PAGE,
-                $aData
-            )
-        );
+        $aResults = $this->oModel->getAll($iPage, static::CONFIG_PER_PAGE, $aData);
+
+        if ($oInput->get(static::CONFIG_IDS_PARAM)) {
+            //  Put these in the requested order
+            $aSorted = [];
+            foreach (explode(',', $oInput->get(static::CONFIG_IDS_PARAM)) as $sId) {
+                foreach ($aResults as $oResult) {
+                    if ($oResult->id === (int) $sId) {
+                        $aSorted[] = $oResult;
+                    }
+                }
+            }
+            $aResults = $aSorted;
+        }
+
+        $aResults = array_map([$this, 'formatObject'], $aResults);
 
         /** @var ApiResponse $oApiResponse */
         $oApiResponse = Factory::factory('ApiResponse', Constants::MODULE_SLUG)
