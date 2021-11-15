@@ -573,8 +573,8 @@ class CrudController extends Base
     /**
      * Deletes an existing resource
      *
-     * @param ApiResponse      $oApiResponse The API Response
-     * @param Resource\Entity  $oItem        The item resource being updated
+     * @param ApiResponse     $oApiResponse The API Response
+     * @param Resource\Entity $oItem        The item resource being updated
      *
      * @throws ApiException
      * @throws FactoryException
