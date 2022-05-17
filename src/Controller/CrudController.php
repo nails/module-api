@@ -405,7 +405,7 @@ class CrudController extends Base
 
         //  Searching
         if ($oInput->get(static::CONFIG_SEARCH_PARAM)) {
-            $aData['keywords'] = $oInput->get(static::CONFIG_SEARCH_PARAM);
+            $aData['keywords'] = utf8_encode($oInput->get(static::CONFIG_SEARCH_PARAM));
         }
 
         // Requesting specific IDs
