@@ -415,7 +415,8 @@ class CrudController extends Base
             ];
         }
 
-        $iTotal   = $this->oModel->countAll($aData);
+        $iTotal = $this->oModel->countAll($aData);
+        /** @var \Nails\Common\Resource\Entity[] $aResults */
         $aResults = $this->oModel->getAll($iPage, static::CONFIG_PER_PAGE, $aData);
 
         if ($oInput->get(static::CONFIG_IDS_PARAM)) {
