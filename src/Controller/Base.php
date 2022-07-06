@@ -26,17 +26,18 @@ use Nails\Factory;
 
 /**
  * Allow the app to add functionality, if needed
+ * Negative conditional helps with static analysis
  */
-if (class_exists('\App\Api\Controller\Base')) {
-    abstract class BaseMiddle extends \App\Api\Controller\Base
-    {
-    }
-} else {
+if (!class_exists('\App\Api\Controller\Base')) {
     abstract class BaseMiddle
     {
         public function __construct()
         {
         }
+    }
+} else {
+    abstract class BaseMiddle extends \App\Api\Controller\Base
+    {
     }
 }
 

@@ -31,8 +31,13 @@ use Nails\Factory;
 
 /**
  * Allow the app to add functionality, if needed
+ * Negative conditional helps with static analysis
  */
-if (class_exists('\App\Api\Controller\BaseRouter')) {
+if (!class_exists('\App\Api\Controller\BaseRouter')) {
+    abstract class BaseMiddle extends \Nails\Common\Controller\Base
+    {
+    }
+} else {
     abstract class BaseMiddle extends \App\Api\Controller\BaseRouter
     {
         public function __construct()
@@ -46,10 +51,6 @@ if (class_exists('\App\Api\Controller\BaseRouter')) {
             }
             parent::__construct();
         }
-    }
-} else {
-    abstract class BaseMiddle extends \Nails\Common\Controller\Base
-    {
     }
 }
 
