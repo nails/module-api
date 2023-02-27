@@ -843,7 +843,7 @@ class ApiRouter extends BaseMiddle
      */
     private static function isValidFormat(?string $sFormat): bool
     {
-        return in_array(strtoupper($sFormat), array_keys(static::$aOutputValidFormats));
+        return in_array(strtoupper($sFormat ?? ''), array_keys(static::$aOutputValidFormats));
     }
 
     // --------------------------------------------------------------------------
