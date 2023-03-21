@@ -217,9 +217,12 @@ class CrudController extends Base
         $oUri = Factory::service('Uri');
 
         //  Test that there's not an explicit method defined for this action
-        $sExplicitMethod = 'post' . ucfirst($oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER));
-        if (method_exists($this, $sExplicitMethod)) {
-            return $this->$sExplicitMethod();
+        $sSegment = $oUri->segment(static::CONFIG_URI_SEGMENT_IDENTIFIER);
+        if ($sSegment) {
+            $sExplicitMethod = 'post' . ucfirst($sSegment);
+            if (method_exists($this, $sExplicitMethod)) {
+                return $this->$sExplicitMethod();
+            }
         }
 
         if (empty($sMethod) || $sMethod === 'index') {
