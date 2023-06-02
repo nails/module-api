@@ -214,7 +214,7 @@ class ApiRouter extends BaseMiddle
                     'error'   => $e->getMessage() ?: 'An unkown validation error occurred',
                     'details' => $e->getData() ?: [],
                 ];
-                if (isSuperuser()) {
+                if (isSuperUser()) {
                     $aOut['exception'] = (object) array_filter([
                         'type' => get_class($e),
                         'file' => $e->getFile(),
@@ -231,7 +231,7 @@ class ApiRouter extends BaseMiddle
                     'error'   => $e->getMessage() ?: 'An unkown error occurred',
                     'details' => $e->getData() ?: [],
                 ];
-                if (isSuperuser()) {
+                if (isSuperUser()) {
                     $aOut['exception'] = (object) array_filter([
                         'type' => get_class($e),
                         'file' => $e->getFile(),
