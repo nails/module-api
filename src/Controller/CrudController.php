@@ -686,7 +686,7 @@ class CrudController extends Base
      * @param string          $sAction The action being performed
      * @param Resource\Entity $oItem   The item the action is being performed against
      */
-    protected function userCan($sAction, Resource\Entity $oItem = null)
+    protected function userCan($sAction, ?Resource\Entity $oItem = null)
     {
         /**
          * By default users can perform any action, apply restrictions by
@@ -706,7 +706,7 @@ class CrudController extends Base
      * @throws FactoryException
      * @throws ValidationException
      */
-    protected function validateUserInput($aData, Resource\Entity $oItem = null)
+    protected function validateUserInput($aData, ?Resource\Entity $oItem = null)
     {
         $aOut    = [];
         $aFields = $this->oModel->describeFields();
