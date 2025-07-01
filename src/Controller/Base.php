@@ -21,25 +21,7 @@ use Nails\Common\Exception\NailsException;
 use Nails\Common\Service\Event;
 use Nails\Common\Service\Input;
 use Nails\Factory;
-
-// --------------------------------------------------------------------------
-
-/**
- * Allow the app to add functionality, if needed
- * Negative conditional helps with static analysis
- */
-if (!class_exists('\App\Api\Controller\Base')) {
-    abstract class BaseMiddle
-    {
-        public function __construct()
-        {
-        }
-    }
-} else {
-    abstract class BaseMiddle extends \App\Api\Controller\Base
-    {
-    }
-}
+use ReflectionException;
 
 // --------------------------------------------------------------------------
 
@@ -48,7 +30,7 @@ if (!class_exists('\App\Api\Controller\Base')) {
  *
  * @package Nails\Api\Controller
  */
-abstract class Base extends BaseMiddle
+abstract class Base
 {
     /**
      * Require the user be authenticated to use any endpoint
@@ -82,12 +64,10 @@ abstract class Base extends BaseMiddle
      *
      * @throws FactoryException
      * @throws NailsException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function __construct(ApiRouter $oApiRouter)
     {
-        parent::__construct();
-
         /** @var Event $oEventService */
         $oEventService = Factory::service('Event');
 
