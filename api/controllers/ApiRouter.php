@@ -14,6 +14,7 @@ use Nails\Auth;
 use Nails\Api\Constants;
 use Nails\Api\Exception\ApiException;
 use Nails\Api\Factory\ApiResponse;
+use Nails\Common\Controller\Base;
 use Nails\Common\Exception\FactoryException;
 use Nails\Common\Exception\ModelException;
 use Nails\Common\Exception\NailsException;
@@ -30,36 +31,9 @@ use Nails\Factory;
 // --------------------------------------------------------------------------
 
 /**
- * Allow the app to add functionality, if needed
- * Negative conditional helps with static analysis
- */
-if (!class_exists('\App\Api\Controller\BaseRouter')) {
-    abstract class BaseMiddle extends \Nails\Common\Controller\Base
-    {
-    }
-} else {
-    abstract class BaseMiddle extends \App\Api\Controller\BaseRouter
-    {
-        public function __construct()
-        {
-            if (!classExtends(parent::class, \Nails\Common\Controller\Base::class)) {
-                throw new NailsException(sprintf(
-                    'Class %s must extend %s',
-                    parent::class,
-                    \Nails\Common\Controller\Base::class
-                ));
-            }
-            parent::__construct();
-        }
-    }
-}
-
-// --------------------------------------------------------------------------
-
-/**
  * Class ApiRouter
  */
-class ApiRouter extends BaseMiddle
+class ApiRouter extends Base
 {
     const DEFAULT_FORMAT                   = \Nails\Api\Api\Output\Json::SLUG;
     const REQUEST_METHOD_GET               = HttpRequest\Get::HTTP_METHOD;
@@ -121,6 +95,7 @@ class ApiRouter extends BaseMiddle
      * ApiRouter constructor.
      *
      * @throws FactoryException
+     * @throws NailsException
      */
     public function __construct()
     {
@@ -132,7 +107,7 @@ class ApiRouter extends BaseMiddle
             ->detectUriSegments();
 
         /**
-         * Calls to the API will load the base controller, this will instanciate the
+         * Calls to the API will load the base controller, this will instantiate the
          * UserFeedback class which will empty the session of flashdata. Flashdata
          * is never used as part of the API so any flashdata is not
          * relevant/intended for the API, so it should be persisted.
@@ -150,6 +125,12 @@ class ApiRouter extends BaseMiddle
 
     /**
      * Route the call to the correct place
+     *
+     * @throws ApiException
+     * @throws FactoryException
+     * @throws ModelException
+     * @throws NailsException
+     * @throws ReflectionException
      */
     public function index()
     {
@@ -159,7 +140,6 @@ class ApiRouter extends BaseMiddle
             $this
                 ->setCorsHeaders()
                 ->setCorsStatusHeader();
-            return;
 
         } else {
 
@@ -245,7 +225,7 @@ class ApiRouter extends BaseMiddle
 
                 /**
                  * When running in PRODUCTION we want the global error handler to catch exceptions so that they
-                 * can be handled proeprly and reported if necessary. In other environments we want to show the
+                 * can be handled properly and reported if necessary. In other environments we want to show the
                  * developer the error quickly and with as much info as possible.
                  */
                 if (Environment::is(Environment::ENV_PROD)) {
@@ -334,11 +314,9 @@ class ApiRouter extends BaseMiddle
      * Detects and validates the output format from the URL
      *
      * @return $this
-     * @throws NailsException
      */
     protected function detectOutputFormat(): self
     {
-
         return $this;
     }
 
