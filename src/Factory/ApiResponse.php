@@ -61,8 +61,8 @@ class ApiResponse
      */
     public function setCode(int $iCode)
     {
-        if ($iCode < 100 || $iCode > 299) {
-            throw new ValidationException('Response code must be in the range 100-299');
+        if (!HttpCodes::isValid($iCode)) {
+            throw new ValidationException('Response code must be a valid HTTP Code');
         }
 
         $this->iCode = $iCode;
